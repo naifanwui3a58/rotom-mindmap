@@ -1,6 +1,7 @@
 # Rotom Mindmap
 
 Rotom Mindmap 是一个基于 Godot 4.6 Mono + C# 的本地桌面写作与知识整理工具。当前版本围绕幕布式大纲编辑展开，使用 Markdown 文件进行大纲写作输入，一键生成思维导图和 CSV 表格，基于 Codex 辅助完成，支持文档管理、实时保存、搜索、脑图生成与导出、CSV 导出。
+Rotom Mindmap is a local desktop writing and knowledge organization tool built with Godot 4.6 Mono and C#. The current version centers on Mubu-style outline editing, using Markdown files for structured writing input and offering one-click generation of mind maps and CSV tables, Assisted by Codex. it supports document management, real-time saving, search, mind map generation and export, and CSV export.
 
 ## 当前能力
 
