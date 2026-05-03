@@ -225,14 +225,14 @@ public partial class MindMapCanvas : Control
     {
         if (button.ButtonIndex == MouseButton.WheelUp && button.Pressed)
         {
-            SetZoom(_zoom * 1.12f);
+            SetZoom(_zoom * 1.12f, button.Position);
             GetViewport().SetInputAsHandled();
             return;
         }
 
         if (button.ButtonIndex == MouseButton.WheelDown && button.Pressed)
         {
-            SetZoom(_zoom / 1.12f);
+            SetZoom(_zoom / 1.12f, button.Position);
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -323,7 +323,7 @@ public partial class MindMapCanvas : Control
         GetViewport().SetInputAsHandled();
     }
 
-    private void SetZoom(float nextZoom)
+    private void SetZoom(float nextZoom, Vector2? anchorViewPosition = null)
     {
         var clamped = Math.Clamp(nextZoom, 0.5f, 2.5f);
         if (Math.Abs(clamped - _zoom) < 0.001f)
@@ -331,15 +331,30 @@ public partial class MindMapCanvas : Control
             return;
         }
 
+        Vector2? logicalAnchor = null;
+        if (anchorViewPosition is { } viewPosition)
+        {
+            logicalAnchor = (viewPosition - _panOffset) / _zoom;
+        }
+
         _zoom = clamped;
+        if (anchorViewPosition is { } nextViewPosition && logicalAnchor is { } nextLogicalAnchor)
+        {
+            _panOffset = nextViewPosition - nextLogicalAnchor * _zoom;
+        }
+
         foreach (var card in _cards.Values)
         {
             ApplyCardVisual(card);
         }
 
-        CustomMinimumSize = new Vector2(
-            Math.Max(980f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.X) + 140f),
-            Math.Max(640f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.Y) + 140f));
+        if (_cards.Count > 0)
+        {
+            CustomMinimumSize = new Vector2(
+                Math.Max(980f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.X) + 140f),
+                Math.Max(640f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.Y) + 140f));
+        }
+
         QueueRedraw();
         EmitSignal(SignalName.ZoomChanged, _zoom);
     }
