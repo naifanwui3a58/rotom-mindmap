@@ -115,8 +115,35 @@ offset_top = 43.0
 offset_right = 1859.0
 offset_bottom = 77.0
 
+[node name="ThemeLabel" type="Label" parent="TopBar" unique_id=800987210]
+layout_direction = 4
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 1564.0
+offset_top = -31.0
+offset_right = 1601.0
+offset_bottom = -7.0
+grow_vertical = 2
+text = "主题"
+horizontal_alignment = 2
+vertical_alignment = 1
+clip_text = true
+
+[node name="ThemeSwitcher" type="OptionButton" parent="TopBar" unique_id=900987210]
+custom_minimum_size = Vector2(112, 34)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -320.0
+offset_top = 43.0
+offset_right = -208.0
+offset_bottom = 77.0
+grow_horizontal = 0
+
 [node name="BrandTitle" type="Label" parent="TopBar" unique_id=720990487]
-modulate = Color(0, 0, 0, 1)
 layout_mode = 1
 offset_left = 16.0
 offset_top = 14.0
@@ -127,7 +154,6 @@ text = "Rotom Mindmap"
 clip_text = true
 
 [node name="BrandSubtitle" type="Label" parent="TopBar" unique_id=629857675]
-modulate = Color(0.435294, 0.466667, 0.541176, 1)
 layout_mode = 1
 offset_left = 16.0
 offset_top = 48.0
@@ -137,7 +163,6 @@ text = "本地优先的大纲写作、脑图与 CSV 工作台"
 clip_text = true
 
 [node name="SaveStatusLabel" type="Label" parent="TopBar" unique_id=1777197072]
-modulate = Color(0.435294, 0.466667, 0.541176, 1)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -163,7 +188,6 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleSidebar")
 
 [node name="VaultLabel" type="Label" parent="SidebarPanel" unique_id=852155620]
-modulate = Color(0.1, 0.1, 0.1, 1)
 layout_mode = 1
 offset_left = 16.0
 offset_top = 16.0
@@ -173,7 +197,6 @@ theme_override_font_sizes/font_size = 18
 clip_text = true
 
 [node name="SidebarMiniInfo" type="Label" parent="SidebarPanel" unique_id=858874288]
-modulate = Color(0.47451, 0.501961, 0.564706, 1)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -235,7 +258,6 @@ offset_left = 126.0
 offset_top = 146.0
 offset_right = 226.0
 offset_bottom = 180.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_styles/normal = SubResource("StylePrimaryButton")
 
 [node name="DeleteButton" type="Button" parent="SidebarPanel" unique_id=86408569]
@@ -248,7 +270,6 @@ offset_bottom = 180.0
 theme_override_styles/normal = SubResource("StylePillButton")
 
 [node name="LibraryHeader" type="Label" parent="SidebarPanel" unique_id=1829727104]
-modulate = Color(0.1, 0.1, 0.1, 1)
 layout_mode = 1
 offset_left = 16.0
 offset_top = 192.0
@@ -291,7 +312,6 @@ theme_override_constants/separation = 2
 [node name="PreviewDocRow" parent="SidebarPanel/LibraryListPanel/LibraryListScroll/LibraryList" unique_id=1668120992 instance=ExtResource("2_library_item_row")]
 
 [node name="TrashLabel" type="Label" parent="SidebarPanel" unique_id=758572214]
-modulate = Color(0.1, 0.1, 0.1, 1)
 layout_mode = 1
 offset_left = 16.0
 offset_top = 643.0
@@ -301,7 +321,6 @@ theme_override_font_sizes/font_size = 16
 clip_text = true
 
 [node name="TrashCountLabel" type="Label" parent="SidebarPanel" unique_id=1548449364]
-modulate = Color(0.47451, 0.501961, 0.564706, 1)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -511,7 +530,6 @@ size_flags_vertical = 3
 theme_override_constants/separation = 0
 
 [node name="CsvExportPathLabel" type="Label" parent="ContentPanel/MainTabs/CsvTab" unique_id=152000128]
-modulate = Color(0.454902, 0.470588, 0.52549, 1)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -523,7 +541,6 @@ grow_vertical = 0
 autowrap_mode = 3
 
 [node name="StatusLabel" type="Label" parent="ContentPanel" unique_id=1929339852]
-modulate = Color(0.352941, 0.384314, 0.454902, 1)
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0

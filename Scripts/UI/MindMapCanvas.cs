@@ -52,6 +52,13 @@ public partial class MindMapCanvas : Control
     private readonly StyleBoxFlat _branchStyle = new();
     private readonly StyleBoxFlat _handleStyle = new();
     private readonly StyleBoxFlat _handleActiveStyle = new();
+    private Color _backgroundColor = new("f7fafe");
+    private Color _edgeColor = new("c7d6e9");
+    private Color _previewEdgeColor = new("aabbd8");
+    private Color _edgeStartHandleColor = new("c3d0e3");
+    private Color _edgeEndHandleColor = new("7d9eff");
+    private Color _titleTextColor = new("223247");
+    private Color _bodyTextColor = new("74849a");
 
     private string _selectedNodeId = string.Empty;
     private string _draggingNodeId = string.Empty;
@@ -118,6 +125,40 @@ public partial class MindMapCanvas : Control
         return _selectedNodeId;
     }
 
+    public void ApplyTheme(
+        bool isDark,
+        Color panelColor,
+        Color borderColor,
+        Color secondaryBorderColor,
+        Color primaryTextColor,
+        Color secondaryTextColor,
+        Color selectedBorderColor)
+    {
+        _backgroundColor = isDark ? new Color("101826") : new Color("f7fafe");
+        _edgeColor = isDark ? new Color("42556f") : new Color("c7d6e9");
+        _previewEdgeColor = isDark ? new Color("6f86a3") : new Color("aabbd8");
+        _edgeStartHandleColor = isDark ? new Color("64748b") : new Color("c3d0e3");
+        _edgeEndHandleColor = isDark ? new Color("7d9eff") : new Color("7d9eff");
+        _titleTextColor = primaryTextColor;
+        _bodyTextColor = secondaryTextColor;
+
+        _rootStyle.BgColor = panelColor;
+        _rootStyle.BorderColor = borderColor;
+        _branchStyle.BgColor = panelColor;
+        _branchStyle.BorderColor = secondaryBorderColor;
+        _handleStyle.BgColor = isDark ? new Color("1f2b3d") : new Color("eef4ff");
+        _handleStyle.BorderColor = isDark ? new Color("51657f") : new Color("c6d8f4");
+        _handleActiveStyle.BgColor = isDark ? new Color("5d8cff") : new Color("7d9eff");
+        _handleActiveStyle.BorderColor = selectedBorderColor;
+
+        foreach (var card in _cards.Values)
+        {
+            ApplyCardVisual(card);
+        }
+
+        QueueRedraw();
+    }
+
     public void RenderNodes(IReadOnlyList<MindMapNodeViewModel> nodes, float zoom)
     {
         _zoom = Math.Clamp(zoom, 0.5f, 2.5f);
@@ -168,7 +209,7 @@ public partial class MindMapCanvas : Control
 
     public override void _Draw()
     {
-        DrawRect(new Rect2(Vector2.Zero, Size), new Color("f7fafe"), true);
+        DrawRect(new Rect2(Vector2.Zero, Size), _backgroundColor, true);
 
         foreach (var (parentId, childId) in _edges)
         {
@@ -196,14 +237,14 @@ public partial class MindMapCanvas : Control
                 && parentId == _dragPreviewTargetId;
             DrawPolyline(
                 route,
-                isPreview ? new Color("aabbd8") : new Color("c7d6e9"),
+                isPreview ? _previewEdgeColor : _edgeColor,
                 isPreview ? Math.Max(1.2f, 1.9f * _zoom) : Math.Max(1.05f, 1.45f * _zoom),
                 true);
 
             if (childId == _selectedNodeId)
             {
-                DrawCircle(start, Math.Max(2f, 2.8f * _zoom), new Color("c3d0e3"));
-                DrawCircle(end, Math.Max(2.4f, 3.4f * _zoom), new Color("7d9eff"));
+                DrawCircle(start, Math.Max(2f, 2.8f * _zoom), _edgeStartHandleColor);
+                DrawCircle(end, Math.Max(2.4f, 3.4f * _zoom), _edgeEndHandleColor);
             }
         }
     }
@@ -225,14 +266,14 @@ public partial class MindMapCanvas : Control
     {
         if (button.ButtonIndex == MouseButton.WheelUp && button.Pressed)
         {
-            SetZoom(_zoom * 1.12f);
+            SetZoom(_zoom * 1.12f, button.Position);
             GetViewport().SetInputAsHandled();
             return;
         }
 
         if (button.ButtonIndex == MouseButton.WheelDown && button.Pressed)
         {
-            SetZoom(_zoom / 1.12f);
+            SetZoom(_zoom / 1.12f, button.Position);
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -313,7 +354,7 @@ public partial class MindMapCanvas : Control
         }
 
         var logicalPosition = (motion.Position - _panOffset) / _zoom - _dragMouseOffset;
-        card.Node.Position = new Vector2(Math.Max(20f, logicalPosition.X), Math.Max(20f, logicalPosition.Y));
+        card.Node.Position = ClampNodePosition(logicalPosition);
         _dragPreviewTargetId = FindClosestDropTarget(card.Node.Id);
         foreach (var currentCard in _cards.Values)
         {
@@ -323,7 +364,7 @@ public partial class MindMapCanvas : Control
         GetViewport().SetInputAsHandled();
     }
 
-    private void SetZoom(float nextZoom)
+    private void SetZoom(float nextZoom, Vector2? anchorViewPosition = null)
     {
         var clamped = Math.Clamp(nextZoom, 0.5f, 2.5f);
         if (Math.Abs(clamped - _zoom) < 0.001f)
@@ -331,17 +372,40 @@ public partial class MindMapCanvas : Control
             return;
         }
 
+        Vector2? logicalAnchor = null;
+        if (anchorViewPosition is { } viewPosition)
+        {
+            logicalAnchor = (viewPosition - _panOffset) / _zoom;
+        }
+
         _zoom = clamped;
+        if (anchorViewPosition is { } nextViewPosition && logicalAnchor is { } nextLogicalAnchor)
+        {
+            _panOffset = nextViewPosition - nextLogicalAnchor * _zoom;
+        }
+
         foreach (var card in _cards.Values)
         {
             ApplyCardVisual(card);
         }
 
-        CustomMinimumSize = new Vector2(
-            Math.Max(980f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.X) + 140f),
-            Math.Max(640f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.Y) + 140f));
+        if (_cards.Count > 0)
+        {
+            CustomMinimumSize = new Vector2(
+                Math.Max(980f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.X) + 140f),
+                Math.Max(640f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.Y) + 140f));
+        }
         QueueRedraw();
         EmitSignal(SignalName.ZoomChanged, _zoom);
+    }
+
+    private Vector2 ClampNodePosition(Vector2 logicalPosition)
+    {
+        var minLogicalX = (-_panOffset.X / _zoom) + 20f;
+        var minLogicalY = (-_panOffset.Y / _zoom) + 20f;
+        return new Vector2(
+            Math.Max(minLogicalX, logicalPosition.X),
+            Math.Max(minLogicalY, logicalPosition.Y));
     }
 
     private NodeCardState CreateCard(MindMapNodeViewModel node, Vector2 baseSize)
@@ -476,13 +540,13 @@ public partial class MindMapCanvas : Control
         var isPreviewTarget = state.Node.Id == _dragPreviewTargetId && state.Node.Id != _draggingNodeId;
         state.Panel.AddThemeStyleboxOverride("panel", BuildStyle(state.Node.IsRoot, isSelected, isPreviewTarget));
         state.TitleLabel.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(state.Node.IsRoot ? 18f * _zoom : 14f * _zoom));
-        state.TitleLabel.AddThemeColorOverride("font_color", new Color("223247"));
+        state.TitleLabel.AddThemeColorOverride("font_color", _titleTextColor);
         state.TitleLabel.CustomMinimumSize = new Vector2(contentWidth, 0f);
 
         if (state.BodyLabel is not null)
         {
             state.BodyLabel.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(11f * _zoom));
-            state.BodyLabel.AddThemeColorOverride("font_color", new Color("74849a"));
+            state.BodyLabel.AddThemeColorOverride("font_color", _bodyTextColor);
             state.BodyLabel.CustomMinimumSize = new Vector2(contentWidth, 0f);
         }
 

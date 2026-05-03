@@ -8,10 +8,8 @@ namespace RotomMindmap.Services;
 
 public sealed class LocalizationService
 {
-    private const string DefaultLocale = "zh-CN";
-
     private readonly Dictionary<string, Dictionary<string, string>> _tables = new(StringComparer.OrdinalIgnoreCase);
-    private string _currentLocale = DefaultLocale;
+    private string _currentLocale = "zh-CN";
 
     public string CurrentLocale => _currentLocale;
 
@@ -25,7 +23,7 @@ public sealed class LocalizationService
         }
 
         var persistedLocale = LoadPersistedLocale();
-        _currentLocale = _tables.ContainsKey(persistedLocale) ? persistedLocale : DefaultLocale;
+        _currentLocale = _tables.ContainsKey(persistedLocale) ? persistedLocale : "zh-CN";
     }
 
     public string Get(string key)
@@ -36,7 +34,7 @@ public sealed class LocalizationService
             return localizedValue;
         }
 
-        if (_tables.TryGetValue(DefaultLocale, out var defaultTable)
+        if (_tables.TryGetValue("zh-CN", out var defaultTable)
             && defaultTable.TryGetValue(key, out var defaultValue))
         {
             return defaultValue;
@@ -96,24 +94,23 @@ public sealed class LocalizationService
         var path = AppPaths.UiSettingsAbsolutePath;
         if (!File.Exists(path))
         {
-            return DefaultLocale;
+            return "zh-CN";
         }
 
         try
         {
-            var json = File.ReadAllText(path);
-            var document = JsonDocument.Parse(json);
-            if (document.RootElement.TryGetProperty("locale", out var localeElement))
+            var settings = JsonSerializer.Deserialize<UiSettings>(File.ReadAllText(path));
+            if (!string.IsNullOrWhiteSpace(settings?.Locale))
             {
-                return localeElement.GetString() ?? DefaultLocale;
+                return settings.Locale;
             }
         }
         catch
         {
-            return DefaultLocale;
+            return "zh-CN";
         }
 
-        return DefaultLocale;
+        return "zh-CN";
     }
 
     private static void PersistLocale(string locale)
@@ -126,14 +123,24 @@ public sealed class LocalizationService
             Directory.CreateDirectory(directory);
         }
 
-        var payload = JsonSerializer.Serialize(new Dictionary<string, string>
+        UiSettings settings;
+        if (File.Exists(path))
         {
-            ["locale"] = locale
-        }, new JsonSerializerOptions
+            try
+            {
+                settings = JsonSerializer.Deserialize<UiSettings>(File.ReadAllText(path)) ?? new UiSettings();
+            }
+            catch
+            {
+                settings = new UiSettings();
+            }
+        }
+        else
         {
-            WriteIndented = true
-        });
+            settings = new UiSettings();
+        }
 
-        File.WriteAllText(path, payload);
+        settings.Locale = locale;
+        File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
     }
 }

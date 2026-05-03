@@ -5,6 +5,15 @@ namespace RotomMindmap.UI;
 
 public partial class LibraryItemRow : PanelContainer
 {
+    private static readonly Color DefaultPrimaryTextColor = new("233247");
+    private static readonly Color DefaultSecondaryTextColor = new("42536b");
+    private static readonly Color DefaultAccentTextColor = new("6f85a6");
+    private static readonly Color DefaultAccentSoftTextColor = new("7c90b4");
+    private static readonly Color DefaultSelectedBgColor = new("edf4ff");
+    private static readonly Color DefaultSelectedBorderColor = new("d4e1f7");
+    private static readonly Color DefaultDropBgColor = new("e7f0ff");
+    private static readonly Color DefaultDropBorderColor = new("9db9f3");
+
     [Signal]
     public delegate void SelectedEventHandler(string relativePath, bool isDirectory);
 
@@ -42,8 +51,50 @@ public partial class LibraryItemRow : PanelContainer
     private bool _isLeftPressed;
     private bool _dragStartedThisPress;
     private Vector2 _leftPressPosition;
+    private Color _primaryTextColor = DefaultPrimaryTextColor;
+    private Color _secondaryTextColor = DefaultSecondaryTextColor;
+    private Color _accentTextColor = DefaultAccentTextColor;
+    private Color _accentSoftTextColor = DefaultAccentSoftTextColor;
+    private Color _selectedBgColor = DefaultSelectedBgColor;
+    private Color _selectedBorderColor = DefaultSelectedBorderColor;
+    private Color _dropBgColor = DefaultDropBgColor;
+    private Color _dropBorderColor = DefaultDropBorderColor;
 
     public string RelativePath => _relativePath;
+
+    public void ApplyTheme(
+        Color primaryTextColor,
+        Color secondaryTextColor,
+        Color accentTextColor,
+        Color accentSoftTextColor,
+        Color selectedBgColor,
+        Color selectedBorderColor,
+        Color dropBgColor,
+        Color dropBorderColor)
+    {
+        _primaryTextColor = primaryTextColor;
+        _secondaryTextColor = secondaryTextColor;
+        _accentTextColor = accentTextColor;
+        _accentSoftTextColor = accentSoftTextColor;
+        _selectedBgColor = selectedBgColor;
+        _selectedBorderColor = selectedBorderColor;
+        _dropBgColor = dropBgColor;
+        _dropBorderColor = dropBorderColor;
+
+        if (_indent is null)
+        {
+            return;
+        }
+
+        _iconLabel.Modulate = _isDirectory ? _accentTextColor : _accentSoftTextColor;
+        _expandButton.AddThemeColorOverride("font_color", _secondaryTextColor);
+        _expandButton.AddThemeColorOverride("font_hover_color", _primaryTextColor);
+        _expandButton.AddThemeColorOverride("font_pressed_color", _primaryTextColor);
+        _renameEdit.AddThemeColorOverride("font_color", _primaryTextColor);
+        _renameEdit.AddThemeColorOverride("caret_color", _primaryTextColor);
+        ApplyTitleColor();
+        RefreshPanelStyle();
+    }
 
     public override void _Ready()
     {
@@ -102,13 +153,17 @@ public partial class LibraryItemRow : PanelContainer
         _expandButton.Visible = isDirectory;
         _expandButton.Text = isExpanded ? "\u25BE" : "\u25B8";
         _iconLabel.Text = isDirectory ? "\u25A0" : "\u2022";
-        _iconLabel.Modulate = isDirectory ? new Color("6f85a6") : new Color("7c90b4");
-        _expandButton.AddThemeColorOverride("font_color", new Color("7d8da4"));
+        _iconLabel.Modulate = isDirectory ? _accentTextColor : _accentSoftTextColor;
+        _expandButton.AddThemeColorOverride("font_color", _secondaryTextColor);
+        _expandButton.AddThemeColorOverride("font_hover_color", _primaryTextColor);
+        _expandButton.AddThemeColorOverride("font_pressed_color", _primaryTextColor);
         _titleLabel.Text = title;
         ApplyTitleColor();
         _titleLabel.Visible = !isEditing;
         _renameEdit.Visible = isEditing;
         _renameEdit.Text = title;
+        _renameEdit.AddThemeColorOverride("font_color", _primaryTextColor);
+        _renameEdit.AddThemeColorOverride("caret_color", _primaryTextColor);
 
         RefreshPanelStyle();
 
@@ -296,7 +351,7 @@ public partial class LibraryItemRow : PanelContainer
 
     private void ApplyTitleColor()
     {
-        _titleLabel.AddThemeColorOverride("font_color", _isSelected ? new Color("233247") : new Color("42536b"));
+        _titleLabel.AddThemeColorOverride("font_color", _isSelected ? _primaryTextColor : _secondaryTextColor);
     }
 
     private T RequireNode<T>(string nodeName) where T : Node
@@ -417,24 +472,24 @@ public partial class LibraryItemRow : PanelContainer
         {
             Text = _titleLabel.Text
         };
-        previewLabel.AddThemeColorOverride("font_color", new Color("233247"));
+        previewLabel.AddThemeColorOverride("font_color", _primaryTextColor);
         previewPanel.AddChild(previewLabel);
         return previewPanel;
     }
 
-    private static StyleBoxFlat BuildPanelStyle(bool isSelected, bool isDropTarget)
+    private StyleBoxFlat BuildPanelStyle(bool isSelected, bool isDropTarget)
     {
         return new StyleBoxFlat
         {
             BgColor = isDropTarget
-                ? new Color("e7f0ff")
+                ? _dropBgColor
                 : isSelected
-                    ? new Color("edf4ff")
+                    ? _selectedBgColor
                     : new Color(1f, 1f, 1f, 0f),
             BorderColor = isDropTarget
-                ? new Color("9db9f3")
+                ? _dropBorderColor
                 : isSelected
-                    ? new Color("d4e1f7")
+                    ? _selectedBorderColor
                     : new Color(1f, 1f, 1f, 0f),
             BorderWidthLeft = isDropTarget || isSelected ? 1 : 0,
             BorderWidthTop = isDropTarget || isSelected ? 1 : 0,
