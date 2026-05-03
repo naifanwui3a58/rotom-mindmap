@@ -1,6 +1,6 @@
 # Rotom Mindmap
 
-Rotom Mindmap 是一个基于 Godot 4.6 Mono + C# 的本地桌面写作与知识整理工具。当前版本围绕幕布式大纲编辑展开，支持文档管理、实时保存、搜索、脑图生成与导出、CSV 导出、回收站恢复。
+Rotom Mindmap 是一个基于 Godot 4.6 Mono + C# 的本地桌面写作与知识整理工具。当前版本围绕幕布式大纲编辑展开，使用 Markdown 文件进行大纲写作输入，一键生成思维导图和 CSV 表格，基于 Codex 辅助完成，支持文档管理、实时保存、搜索、脑图生成与导出、CSV 导出。
 
 ## 当前能力
 
@@ -13,40 +13,6 @@ Rotom Mindmap 是一个基于 Godot 4.6 Mono + C# 的本地桌面写作与知识
 - 大纲生成脑图
 - 导出 Markdown / CSV / 脑图 PNG / JPG / SVG
 - 支持拖入外部 `.md` / `.markdown` / `.txt`
-
-## 运行方式
-
-1. 用 Godot 4.6 Mono 打开目录 `D:\Godot\rotom-mindmap`
-2. 等待 Godot 刷新 .NET 项目
-3. 运行主场景 [Main.tscn](/D:/Godot/rotom-mindmap/Scenes/Main.tscn)
-
-命令行也可以直接编译：
-
-```powershell
-dotnet build "D:\Godot\rotom-mindmap\RotomMindmap.csproj"
-```
-
-## 界面与缩放
-
-- 设计基准尺寸是 `1920x1080`
-- 项目使用 `canvas_items + expand`
-- 全屏或更大窗口时按比例扩展，不再强制保留黑边
-
-## 数据目录
-
-为了避免“编辑器里测试过的数据”直接混到导出的 exe 里，项目现在分开使用工作区：
-
-- Godot 编辑器运行：`user://workspace-editor/`
-- 导出 exe 运行：`user://workspace-app/`
-- 旧版兼容迁移：如果编辑器工作区还是空的，会从旧的 `user://workspace/` 自动迁移一次
-
-工作区内目录：
-
-- `vault/`：文档库
-- `.trash/`：回收站
-- `exports/`：导出文件
-- `.mindmap/`：脑图节点布局状态
-- `ui-settings.json`：语言等界面设置
 
 ## 大纲规则
 
@@ -94,20 +60,3 @@ dotnet build "D:\Godot\rotom-mindmap\RotomMindmap.csproj"
 - `path`
 
 适合作为层级配置表使用。
-
-## 导出 exe
-
-1. 在 Godot Mono 打开 `Project > Export`
-2. 添加 `Windows Desktop`
-3. 使用带 Mono/.NET 的 Windows 导出模板
-4. 项目已带 [export_presets.cfg](/D:/Godot/rotom-mindmap/export_presets.cfg)
-5. 默认输出是 `build\RotomMindmap.exe`
-
-## 验证建议
-
-- `dotnet build` 通过
-- 运行主场景，确认中文正常显示
-- 切换语言后位置不乱跳
-- 全屏后界面不再出现黑边式留空
-- 编辑器数据与导出 exe 数据目录分离
-- 导出 Markdown / CSV / 脑图文件后检查内容
