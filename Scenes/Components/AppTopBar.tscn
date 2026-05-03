@@ -1,0 +1,84 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleTopBar"]
+bg_color = Color(0.980392, 0.980392, 0.976471, 1)
+border_color = Color(0.862745, 0.866667, 0.87451, 1)
+border_width_bottom = 1
+
+[node name="TopBar" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleTopBar")
+
+[node name="TopBarRow" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = -20.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LocaleBox" type="Control" parent="TopBarRow"]
+layout_mode = 1
+offset_right = 120.0
+offset_bottom = 64.0
+
+[node name="LocaleLabel" type="Label" parent="TopBarRow/LocaleBox"]
+layout_mode = 1
+offset_top = 2.0
+offset_right = 120.0
+offset_bottom = 22.0
+clip_text = true
+modulate = Color(0.435294, 0.466667, 0.541176, 1)
+text = "Language"
+
+[node name="LocaleSwitcher" type="OptionButton" parent="TopBarRow/LocaleBox"]
+custom_minimum_size = Vector2(110, 34)
+layout_mode = 1
+offset_top = 26.0
+offset_right = 110.0
+offset_bottom = 60.0
+
+[node name="BrandColumn" type="Control" parent="TopBarRow"]
+layout_mode = 1
+offset_left = 138.0
+offset_right = 600.0
+offset_bottom = 64.0
+
+[node name="BrandTitle" type="Label" parent="TopBarRow/BrandColumn"]
+layout_mode = 1
+offset_top = 0.0
+offset_right = 260.0
+offset_bottom = 32.0
+clip_text = true
+theme_override_font_sizes/font_size = 24
+text = "Rotom Mindmap"
+
+[node name="BrandSubtitle" type="Label" parent="TopBarRow/BrandColumn"]
+layout_mode = 1
+offset_top = 34.0
+offset_right = 430.0
+offset_bottom = 58.0
+clip_text = true
+modulate = Color(0.435294, 0.466667, 0.541176, 1)
+text = ""
+
+[node name="SaveStatusLabel" type="Label" parent="TopBarRow"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 18.0
+offset_right = 0.0
+offset_bottom = 46.0
+grow_horizontal = 0
+horizontal_alignment = 2
+vertical_alignment = 1
+clip_text = true
+modulate = Color(0.435294, 0.466667, 0.541176, 1)
+text = ""

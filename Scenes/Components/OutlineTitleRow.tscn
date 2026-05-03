@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/OutlineTitleRow.cs" id="1_outline_title_row"]
+
+[node name="OutlineTitleRow" type="LineEdit"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("1_outline_title_row")
+flat = true
+theme_override_font_sizes/font_size = 30
+placeholder_text = "Type a title"

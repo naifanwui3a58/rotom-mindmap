@@ -1,0 +1,42 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/LibraryItemRow.cs" id="1_library_item_row"]
+
+[node name="LibraryItemRow" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+script = ExtResource("1_library_item_row")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Indent" type="Control" parent="Row"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="ExpandButton" type="Button" parent="Row"]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+flat = true
+text = "▾"
+
+[node name="IconLabel" type="Label" parent="Row"]
+custom_minimum_size = Vector2(18, 0)
+layout_mode = 2
+vertical_alignment = 1
+text = "•"
+
+[node name="TitleLabel" type="Label" parent="Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+text = "Untitled"
+
+[node name="RenameEdit" type="LineEdit" parent="Row"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3

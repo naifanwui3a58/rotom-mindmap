@@ -1,0 +1,204 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/MindMapCanvas.cs" id="1_mindmap_canvas"]
+[ext_resource type="PackedScene" path="res://Scenes/Components/OutlineTitleRow.tscn" id="2_outline_title_row"]
+[ext_resource type="PackedScene" path="res://Scenes/Components/OutlineItemRow.tscn" id="3_outline_item_row"]
+
+[sub_resource type="StyleBoxFlat" id="StyleContentSurface"]
+bg_color = Color(1, 1, 1, 1)
+border_color = Color(0.882353, 0.886275, 0.898039, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StylePillButton"]
+bg_color = Color(0.945098, 0.94902, 0.956863, 1)
+border_color = Color(0.784314, 0.807843, 0.847059, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleOutlineViewport"]
+bg_color = Color(1, 1, 1, 1)
+border_color = Color(0.921569, 0.92549, 0.933333, 1)
+border_width_top = 1
+
+[node name="ContentArea" type="PanelContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleContentSurface")
+
+[node name="ContentBox" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 14.0
+offset_right = -14.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainTabs" type="TabContainer" parent="ContentBox"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = -34.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="OutlineTab" type="VBoxContainer" parent="ContentBox/MainTabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="OutlineHintLabel" type="Label" parent="ContentBox/MainTabs/OutlineTab"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+modulate = Color(0.454902, 0.470588, 0.52549, 1)
+text = ""
+
+[node name="OutlineViewport" type="PanelContainer" parent="ContentBox/MainTabs/OutlineTab"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleOutlineViewport")
+
+[node name="OutlineScroll" type="ScrollContainer" parent="ContentBox/MainTabs/OutlineTab/OutlineViewport"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="OutlineList" type="VBoxContainer" parent="ContentBox/MainTabs/OutlineTab/OutlineViewport/OutlineScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="PreviewOutlineTitleRow" parent="ContentBox/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" instance=ExtResource("2_outline_title_row")]
+layout_mode = 2
+
+[node name="PreviewOutlineItemRowA" parent="ContentBox/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" instance=ExtResource("3_outline_item_row")]
+layout_mode = 2
+
+[node name="PreviewOutlineItemRowB" parent="ContentBox/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" instance=ExtResource("3_outline_item_row")]
+layout_mode = 2
+
+[node name="MindMapTab" type="VBoxContainer" parent="ContentBox/MainTabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MindMapToolbar" type="HBoxContainer" parent="ContentBox/MainTabs/MindMapTab"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MindMapHint" type="Label" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+modulate = Color(0.454902, 0.470588, 0.52549, 1)
+text = ""
+
+[node name="AddMindMapChildButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(74, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="AddMindMapSiblingButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(74, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="RenameMindMapNodeButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(74, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="DeleteMindMapNodeButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(74, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="GenerateMindMapButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(74, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="MindMapScroll" type="ScrollContainer" parent="ContentBox/MainTabs/MindMapTab"]
+custom_minimum_size = Vector2(0, 620)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MindMapCanvas" type="Control" parent="ContentBox/MainTabs/MindMapTab/MindMapScroll"]
+custom_minimum_size = Vector2(980, 640)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_mindmap_canvas")
+
+[node name="CsvTab" type="VBoxContainer" parent="ContentBox/MainTabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CsvToolbar" type="HBoxContainer" parent="ContentBox/MainTabs/CsvTab"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CsvHintLabel" type="Label" parent="ContentBox/MainTabs/CsvTab/CsvToolbar"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+modulate = Color(0.454902, 0.470588, 0.52549, 1)
+text = ""
+
+[node name="ExportCsvButton" type="Button" parent="ContentBox/MainTabs/CsvTab/CsvToolbar"]
+custom_minimum_size = Vector2(94, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
+[node name="CsvPreview" type="Tree" parent="ContentBox/MainTabs/CsvTab"]
+custom_minimum_size = Vector2(0, 620)
+layout_mode = 2
+size_flags_vertical = 3
+columns = 8
+column_titles_visible = true
+
+[node name="CsvExportPathLabel" type="Label" parent="ContentBox/MainTabs/CsvTab"]
+layout_mode = 2
+autowrap_mode = 3
+modulate = Color(0.454902, 0.470588, 0.52549, 1)
+text = ""
+
+[node name="StatusLabel" type="Label" parent="ContentBox"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -30.0
+offset_bottom = 0.0
+grow_horizontal = 2
+horizontal_alignment = 0
+vertical_alignment = 1
+clip_text = true
+modulate = Color(0.352941, 0.384314, 0.454902, 1)
+text = ""

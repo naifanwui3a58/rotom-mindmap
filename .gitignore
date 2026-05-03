@@ -1,0 +1,11 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.rsuser
+*.suo
+*.tmp
+*.log

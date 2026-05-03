@@ -1,0 +1,545 @@
+[gd_scene format=3 uid="uid://buqxec7mr6f3v"]
+
+[ext_resource type="Script" uid="uid://bw2wvvrjkwbyu" path="res://Scripts/Main.cs" id="1_main"]
+[ext_resource type="PackedScene" path="res://Scenes/Components/LibraryItemRow.tscn" id="2_library_item_row"]
+[ext_resource type="PackedScene" path="res://Scenes/Components/OutlineTitleRow.tscn" id="3_outline_title_row"]
+[ext_resource type="PackedScene" path="res://Scenes/Components/OutlineItemRow.tscn" id="4_outline_item_row"]
+[ext_resource type="Script" uid="uid://dbihh57os2r0m" path="res://Scripts/UI/MindMapCanvas.cs" id="5_mindmap_canvas"]
+
+[sub_resource type="StyleBoxFlat" id="StyleTopBar"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.858824, 0.898039, 0.941176, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleSidebar"]
+bg_color = Color(0.952941, 0.968627, 0.988235, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.858824, 0.898039, 0.941176, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StylePillButton"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.847059, 0.886275, 0.937255, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StylePrimaryButton"]
+bg_color = Color(0.301961, 0.482353, 0.952941, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.258824, 0.431373, 0.898039, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleContentSurface"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.858824, 0.898039, 0.941176, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleOutlineViewport"]
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.890196, 0.921569, 0.956863, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[node name="Main" type="Control" unique_id=1369209653]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="." unique_id=2049854218]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.960784, 0.972549, 0.984314, 1)
+
+[node name="TopBar" type="Panel" parent="." unique_id=1840534360]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = -18.0
+offset_bottom = 106.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleTopBar")
+
+[node name="LocaleSwitcher" type="OptionButton" parent="TopBar" unique_id=1095954506]
+custom_minimum_size = Vector2(112, 34)
+layout_mode = 1
+offset_left = 1747.0
+offset_top = 43.0
+offset_right = 1859.0
+offset_bottom = 77.0
+
+[node name="BrandTitle" type="Label" parent="TopBar" unique_id=720990487]
+modulate = Color(0, 0, 0, 1)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 488.0
+offset_bottom = 48.0
+theme_override_font_sizes/font_size = 24
+text = "Rotom Mindmap"
+clip_text = true
+
+[node name="BrandSubtitle" type="Label" parent="TopBar" unique_id=629857675]
+modulate = Color(0.435294, 0.466667, 0.541176, 1)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 48.0
+offset_right = 528.0
+offset_bottom = 74.0
+text = "本地优先的大纲写作、脑图与 CSV 工作台"
+clip_text = true
+
+[node name="SaveStatusLabel" type="Label" parent="TopBar" unique_id=1777197072]
+modulate = Color(0.435294, 0.466667, 0.541176, 1)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -247.0
+offset_top = 10.0
+offset_right = -25.0
+offset_bottom = 38.0
+grow_horizontal = 0
+horizontal_alignment = 2
+vertical_alignment = 1
+clip_text = true
+
+[node name="SidebarPanel" type="Panel" parent="." unique_id=1512902269]
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 118.0
+offset_right = 370.0
+offset_bottom = -18.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleSidebar")
+
+[node name="VaultLabel" type="Label" parent="SidebarPanel" unique_id=852155620]
+modulate = Color(0.1, 0.1, 0.1, 1)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 244.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 18
+clip_text = true
+
+[node name="SidebarMiniInfo" type="Label" parent="SidebarPanel" unique_id=858874288]
+modulate = Color(0.47451, 0.501961, 0.564706, 1)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -88.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 44.0
+grow_horizontal = 0
+horizontal_alignment = 2
+clip_text = true
+
+[node name="SearchBox" type="LineEdit" parent="SidebarPanel" unique_id=872580539]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 54.0
+offset_right = -16.0
+offset_bottom = 96.0
+grow_horizontal = 2
+
+[node name="ContentSearchCheck" type="Button" parent="SidebarPanel" unique_id=372143384]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 104.0
+offset_right = 220.0
+offset_bottom = 136.0
+toggle_mode = true
+clip_text = true
+
+[node name="ClearSearchButton" type="Button" parent="SidebarPanel" unique_id=851279652]
+custom_minimum_size = Vector2(82, 34)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -98.0
+offset_top = 102.0
+offset_right = -16.0
+offset_bottom = 136.0
+grow_horizontal = 0
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="NewFolderButton" type="Button" parent="SidebarPanel" unique_id=895583732]
+custom_minimum_size = Vector2(100, 34)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 146.0
+offset_right = 116.0
+offset_bottom = 180.0
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="NewDocumentButton" type="Button" parent="SidebarPanel" unique_id=1321982901]
+custom_minimum_size = Vector2(100, 34)
+layout_mode = 1
+offset_left = 126.0
+offset_top = 146.0
+offset_right = 226.0
+offset_bottom = 180.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = SubResource("StylePrimaryButton")
+
+[node name="DeleteButton" type="Button" parent="SidebarPanel" unique_id=86408569]
+custom_minimum_size = Vector2(100, 34)
+layout_mode = 1
+offset_left = 236.0
+offset_top = 146.0
+offset_right = 336.0
+offset_bottom = 180.0
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="LibraryHeader" type="Label" parent="SidebarPanel" unique_id=1829727104]
+modulate = Color(0.1, 0.1, 0.1, 1)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 192.0
+offset_right = 180.0
+offset_bottom = 216.0
+theme_override_font_sizes/font_size = 16
+clip_text = true
+
+[node name="LibraryTree" type="Tree" parent="SidebarPanel" unique_id=371554618]
+visible = false
+layout_mode = 1
+offset_left = 16.0
+offset_top = 224.0
+offset_right = 336.0
+offset_bottom = 640.0
+hide_root = true
+
+[node name="LibraryListPanel" type="PanelContainer" parent="SidebarPanel" unique_id=900348735]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 220.0
+offset_right = -16.0
+offset_bottom = 500.0
+grow_horizontal = 2
+
+[node name="LibraryListScroll" type="ScrollContainer" parent="SidebarPanel/LibraryListPanel" unique_id=459540769]
+custom_minimum_size = Vector2(0, 400)
+layout_mode = 2
+
+[node name="LibraryList" type="VBoxContainer" parent="SidebarPanel/LibraryListPanel/LibraryListScroll" unique_id=1277337212]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="PreviewFolderRow" parent="SidebarPanel/LibraryListPanel/LibraryListScroll/LibraryList" unique_id=2122971160 instance=ExtResource("2_library_item_row")]
+
+[node name="PreviewDocRow" parent="SidebarPanel/LibraryListPanel/LibraryListScroll/LibraryList" unique_id=1668120992 instance=ExtResource("2_library_item_row")]
+
+[node name="TrashLabel" type="Label" parent="SidebarPanel" unique_id=758572214]
+modulate = Color(0.1, 0.1, 0.1, 1)
+layout_mode = 1
+offset_left = 16.0
+offset_top = 643.0
+offset_right = 220.0
+offset_bottom = 667.0
+theme_override_font_sizes/font_size = 16
+clip_text = true
+
+[node name="TrashCountLabel" type="Label" parent="SidebarPanel" unique_id=1548449364]
+modulate = Color(0.47451, 0.501961, 0.564706, 1)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -48.0
+offset_top = 643.0
+offset_right = -16.0
+offset_bottom = 667.0
+grow_horizontal = 0
+text = "0"
+horizontal_alignment = 2
+
+[node name="TrashList" type="ItemList" parent="SidebarPanel" unique_id=1962377024]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 674.0
+offset_right = -16.0
+offset_bottom = 877.0
+grow_horizontal = 2
+
+[node name="RestoreButton" type="Button" parent="SidebarPanel" unique_id=721229414]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 888.0
+offset_right = 160.0
+offset_bottom = 922.0
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="PurgeButton" type="Button" parent="SidebarPanel" unique_id=2038100035]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_top = 888.0
+offset_right = -16.0
+offset_bottom = 922.0
+grow_horizontal = 0
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="ContentPanel" type="Panel" parent="." unique_id=1512999588]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 382.0
+offset_top = 118.0
+offset_right = -18.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleContentSurface")
+
+[node name="MainTabs" type="TabContainer" parent="ContentPanel" unique_id=737284693]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -16.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+current_tab = 0
+
+[node name="OutlineTab" type="Control" parent="ContentPanel/MainTabs" unique_id=1520671056]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="OutlineInfoBar" type="HBoxContainer" parent="ContentPanel/MainTabs/OutlineTab" unique_id=153670001]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="ExportOutlineMdButton" type="Button" parent="ContentPanel/MainTabs/OutlineTab/OutlineInfoBar" unique_id=155670003]
+custom_minimum_size = Vector2(138, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="OutlineViewport" type="PanelContainer" parent="ContentPanel/MainTabs/OutlineTab" unique_id=1688697506]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 52.0
+offset_right = 3.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleOutlineViewport")
+
+[node name="OutlineScroll" type="ScrollContainer" parent="ContentPanel/MainTabs/OutlineTab/OutlineViewport" unique_id=707818005]
+layout_mode = 2
+
+[node name="OutlineList" type="VBoxContainer" parent="ContentPanel/MainTabs/OutlineTab/OutlineViewport/OutlineScroll" unique_id=1335093470]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="PreviewOutlineTitleRow" parent="ContentPanel/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" unique_id=1980187157 instance=ExtResource("3_outline_title_row")]
+
+[node name="PreviewOutlineItemRowA" parent="ContentPanel/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" unique_id=796098586 instance=ExtResource("4_outline_item_row")]
+
+[node name="PreviewOutlineItemRowB" parent="ContentPanel/MainTabs/OutlineTab/OutlineViewport/OutlineScroll/OutlineList" unique_id=782519338 instance=ExtResource("4_outline_item_row")]
+
+[node name="MindMapTab" type="Control" parent="ContentPanel/MainTabs" unique_id=1075837151]
+visible = false
+layout_mode = 2
+metadata/_tab_index = 1
+
+[node name="MindMapInfoBar" type="HBoxContainer" parent="ContentPanel/MainTabs/MindMapTab" unique_id=156670004]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="ExportMindMapButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=157670005]
+custom_minimum_size = Vector2(118, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="AddMindMapChildButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=1984063628]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="AddMindMapSiblingButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=1042375874]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="RenameMindMapNodeButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=1743170112]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="DeleteMindMapNodeButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=939464083]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="GenerateMindMapButton" type="Button" parent="ContentPanel/MainTabs/MindMapTab/MindMapInfoBar" unique_id=413674734]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="MindMapScroll" type="ScrollContainer" parent="ContentPanel/MainTabs/MindMapTab" unique_id=1465416119]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 52.0
+offset_right = 3.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MindMapCanvas" type="Control" parent="ContentPanel/MainTabs/MindMapTab/MindMapScroll" unique_id=34740589]
+custom_minimum_size = Vector2(980, 640)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("5_mindmap_canvas")
+
+[node name="CsvTab" type="Panel" parent="ContentPanel/MainTabs" unique_id=1752982372]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleContentSurface")
+metadata/_tab_index = 2
+
+[node name="CsvInfoBar" type="HBoxContainer" parent="ContentPanel/MainTabs/CsvTab" unique_id=158670006]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="ExportCsvButton" type="Button" parent="ContentPanel/MainTabs/CsvTab/CsvInfoBar" unique_id=440273797]
+custom_minimum_size = Vector2(108, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+
+[node name="CsvSheetScroll" type="ScrollContainer" parent="ContentPanel/MainTabs/CsvTab" unique_id=160670008]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 52.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CsvSheetRows" type="VBoxContainer" parent="ContentPanel/MainTabs/CsvTab/CsvSheetScroll" unique_id=161670009]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="CsvExportPathLabel" type="Label" parent="ContentPanel/MainTabs/CsvTab" unique_id=152000128]
+modulate = Color(0.454902, 0.470588, 0.52549, 1)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+autowrap_mode = 3
+
+[node name="StatusLabel" type="Label" parent="ContentPanel" unique_id=1929339852]
+modulate = Color(0.352941, 0.384314, 0.454902, 1)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -44.0
+offset_right = -13.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 0
+vertical_alignment = 1
+clip_text = true
+
+[node name="SaveTimer" type="Timer" parent="." unique_id=1964898324]
+wait_time = 0.6
+one_shot = true
+
+[node name="RuntimeOverlays" type="Node" parent="." unique_id=630021379]

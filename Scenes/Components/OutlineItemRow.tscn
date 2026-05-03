@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/UI/OutlineItemRow.cs" id="1_outline_item_row"]
+
+[node name="OutlineItemRow" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("1_outline_item_row")
+theme_override_constants/separation = 8
+
+[node name="Indent" type="Control" parent="."]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="Bullet" type="Label" parent="."]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 18
+text = "-"
+
+[node name="ItemEdit" type="LineEdit" parent="."]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+size_flags_horizontal = 3
+flat = true
+theme_override_font_sizes/font_size = 20
+placeholder_text = "Type an item"
