@@ -45,13 +45,14 @@ public partial class Main : Control
 
     private readonly LibraryService _libraryService = new();
     private readonly LocalizationService _localization = new();
+    private readonly ThemeService _themeService = new();
     private readonly MarkdownStructureParser _structureParser = new();
     private readonly OutlineDocumentSerializer _outlineSerializer = new();
     private static readonly string[] CsvColumns = ["id", "parent_id", "level", "type", "title", "body", "order", "path"];
     private static readonly int[] CsvColumnMinimumWidths = [80, 92, 72, 84, 220, 260, 84, 220];
-    private readonly Color _primaryTextColor = new("233247");
-    private readonly Color _secondaryTextColor = new("6a7a90");
-    private readonly Color _subtleTextColor = new("8d9ab0");
+    private Color _primaryTextColor = new("233247");
+    private Color _secondaryTextColor = new("6a7a90");
+    private Color _subtleTextColor = new("8d9ab0");
     private readonly StyleBoxFlat _toolbarSurfaceStyle = new();
     private readonly StyleBoxFlat _inputSurfaceStyle = new();
     private readonly StyleBoxFlat _inputFocusSurfaceStyle = new();
@@ -116,6 +117,8 @@ public partial class Main : Control
     private Button _deleteMindMapNodeButton = null!;
     private OptionButton? _localeSwitcher;
     private Label? _localeLabel;
+    private OptionButton? _themeSwitcher;
+    private Label? _themeLabel;
 
     private readonly List<OutlineItem> _outlineItems = [];
     private readonly Dictionary<string, LineEdit> _outlineEditors = new();
@@ -153,6 +156,7 @@ public partial class Main : Control
         EnsureRuntimeOverlays();
         CacheNodes();
         _localization.Initialize();
+        _themeService.Initialize();
         WireEvents();
         _libraryService.Initialize();
         ConfigureModernUi();
@@ -228,6 +232,8 @@ public partial class Main : Control
         _deleteMindMapNodeButton = RequireNode<Button>("DeleteMindMapNodeButton");
         _localeSwitcher = TryNode<OptionButton>("LocaleSwitcher");
         _localeLabel = TryNode<Label>("LocaleLabel");
+        _themeSwitcher = TryNode<OptionButton>("ThemeSwitcher");
+        _themeLabel = TryNode<Label>("ThemeLabel");
         FindChild("AddOutlineItemButton", true, false)?.QueueFree();
     }
 
@@ -379,6 +385,10 @@ public partial class Main : Control
         {
             _localeSwitcher.ItemSelected += OnLocaleSelected;
         }
+        if (_themeSwitcher is not null)
+        {
+            _themeSwitcher.ItemSelected += OnThemeSelected;
+        }
         _libraryListPanel.GuiInput += OnLibraryListBackgroundGuiInput;
         _libraryListScroll.Resized += OnScrollContentViewportResized;
         _outlineScroll.Resized += OnScrollContentViewportResized;
@@ -528,7 +538,7 @@ public partial class Main : Control
         background.OffsetTop = 0f;
         background.OffsetRight = 0f;
         background.OffsetBottom = 0f;
-        background.Color = Colors.White;
+        background.Color = _csvPanelStyle.BgColor;
         csvTab.MoveChild(background, 0);
     }
 
@@ -1193,7 +1203,363 @@ public partial class Main : Control
             ApplyPrimaryButtonStyle(newDocumentButton);
         }
 
+        ConfigureThemeSwitcher();
         ConfigureLocaleSwitcher();
+        ApplyLocalizedText();
+    }
+
+    private void ConfigureThemeSwitcher()
+    {
+        if (_themeSwitcher is null)
+        {
+            return;
+        }
+
+        _suppressEvents = true;
+        _themeSwitcher.Clear();
+        _themeSwitcher.AddItem(T("theme.system"));
+        _themeSwitcher.AddItem(T("theme.light"));
+        _themeSwitcher.AddItem(T("theme.dark"));
+
+        var currentMode = LoadThemeMode();
+        _themeSwitcher.Select((int)currentMode);
+        _suppressEvents = false;
+        ApplyThemeMode(currentMode);
+    }
+
+    private ThemeMode LoadThemeMode()
+    {
+        return _themeService.CurrentMode;
+    }
+
+    private void SaveThemeMode(ThemeMode mode)
+    {
+        _themeService.SetMode(mode);
+        ApplyThemeMode(mode);
+    }
+
+    private void ApplyThemeMode(ThemeMode mode)
+    {
+        var effectiveMode = mode == ThemeMode.System ? (_themeService.ResolveEffectiveMode()) : mode;
+        var isDark = effectiveMode == ThemeMode.Dark;
+
+        ApplyThemePalette(isDark);
+    }
+
+    private void ApplyThemePalette(bool isDark)
+    {
+        var background = isDark ? new Color("111827") : new Color("f5f8fc");
+        var panel = isDark ? new Color("17212f") : Colors.White;
+        var panelSoft = isDark ? new Color("1e293b") : new Color("f3f7fc");
+        var border = isDark ? new Color("334155") : new Color("dbe5f0");
+        var borderSoft = isDark ? new Color("2a3a4f") : new Color("e1e9f2");
+        var primaryText = isDark ? new Color("f8fafc") : new Color("233247");
+        var secondaryText = isDark ? new Color("cbd5e1") : new Color("6a7a90");
+        var subtleText = isDark ? new Color("94a3b8") : new Color("8d9ab0");
+        var inputBg = isDark ? new Color("0f172a") : Colors.White;
+        var inputHover = isDark ? new Color("1e293b") : new Color("eef4ff");
+        var selected = isDark ? new Color("24324a") : new Color("edf4ff");
+        var selectedBorder = isDark ? new Color("475569") : new Color("cedcf3");
+        var cellAlt = isDark ? new Color("0f172a") : new Color("f8fafc");
+        var listBg = isDark ? new Color("101826") : new Color("f3f7fc");
+        var guideColor = isDark ? new Color("334155") : new Color("e4ebf4");
+        var destructiveText = isDark ? new Color("f3b1a5") : new Color("b35a48");
+
+        if (TryNode<ColorRect>("Background") is { } backgroundRect)
+        {
+            backgroundRect.Color = background;
+        }
+
+        _toolbarSurfaceStyle.BgColor = panel;
+        _toolbarSurfaceStyle.BorderColor = borderSoft;
+        _inputSurfaceStyle.BgColor = inputBg;
+        _inputSurfaceStyle.BorderColor = border;
+        _inputFocusSurfaceStyle.BgColor = inputBg;
+        _inputFocusSurfaceStyle.BorderColor = isDark ? new Color("7d9cff") : new Color("7c9cff");
+        _outlineItemStyle.BgColor = new Color(1f, 1f, 1f, 0f);
+        _outlineItemFocusStyle.BgColor = inputHover;
+        _outlineItemFocusStyle.BorderColor = border;
+        _treePanelStyle.BgColor = listBg;
+        _treePanelStyle.BorderColor = border;
+        _trashPanelStyle.BgColor = listBg;
+        _trashPanelStyle.BorderColor = border;
+        _csvPanelStyle.BgColor = panel;
+        _csvPanelStyle.BorderColor = border;
+        _csvHeaderStyle.BgColor = isDark ? new Color("1e2a3c") : new Color("f7fbff");
+        _csvHeaderStyle.BorderColor = border;
+        _csvHeaderHoverStyle.BgColor = isDark ? new Color("253247") : new Color("eef6ff");
+        _csvHeaderHoverStyle.BorderColor = border;
+        _csvHeaderPressedStyle.BgColor = isDark ? new Color("2a3a52") : new Color("e6f0ff");
+        _csvHeaderPressedStyle.BorderColor = border;
+        _csvRowSelectedStyle.BgColor = selected;
+        _csvRowSelectedStyle.BorderColor = selectedBorder;
+        _csvRowSelectedFocusStyle.BgColor = isDark ? new Color("24324a") : new Color("e3efff");
+        _csvRowSelectedFocusStyle.BorderColor = selectedBorder;
+        _csvBodyPanelStyle.BgColor = panel;
+        _csvBodyPanelStyle.BorderColor = border;
+        _csvCellStyle.BgColor = panel;
+        _csvCellStyle.BorderColor = borderSoft;
+        _csvCellAltStyle.BgColor = cellAlt;
+        _csvCellAltStyle.BorderColor = borderSoft;
+        _softButtonStyle.BgColor = panel;
+        _softButtonStyle.BorderColor = border;
+        _softButtonHoverStyle.BgColor = inputHover;
+        _softButtonHoverStyle.BorderColor = border;
+        _softButtonDisabledStyle.BgColor = isDark ? new Color("1f2937") : new Color("f6f8fb");
+        _softButtonDisabledStyle.BorderColor = borderSoft;
+        _destructiveButtonStyle.BgColor = isDark ? new Color("2f1f22") : new Color("fff6f3");
+        _destructiveButtonStyle.BorderColor = isDark ? new Color("6d3f45") : new Color("efcfc4");
+        _destructiveButtonDisabledStyle.BgColor = isDark ? new Color("23181a") : new Color("f9f6f5");
+        _destructiveButtonDisabledStyle.BorderColor = isDark ? new Color("4c373a") : new Color("ebe2df");
+        _treeSelectedStyle.BgColor = selected;
+        _treeSelectedStyle.BorderColor = selectedBorder;
+        _treeCursorStyle.BorderColor = border;
+        _listSelectedStyle.BgColor = selected;
+        _listSelectedStyle.BorderColor = selectedBorder;
+
+        var shellStyle = new StyleBoxFlat
+        {
+            BgColor = panel,
+            BorderColor = border,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 20,
+            CornerRadiusTopRight = 20,
+            CornerRadiusBottomLeft = 20,
+            CornerRadiusBottomRight = 20
+        };
+
+        var sidebarShellStyle = new StyleBoxFlat
+        {
+            BgColor = panelSoft,
+            BorderColor = border,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 20,
+            CornerRadiusTopRight = 20,
+            CornerRadiusBottomLeft = 20,
+            CornerRadiusBottomRight = 20
+        };
+
+        var topBarShellStyle = new StyleBoxFlat
+        {
+            BgColor = panel,
+            BorderColor = border,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 16,
+            CornerRadiusTopRight = 16,
+            CornerRadiusBottomLeft = 16,
+            CornerRadiusBottomRight = 16
+        };
+
+        _primaryTextColor = primaryText;
+        _secondaryTextColor = secondaryText;
+        _subtleTextColor = subtleText;
+
+        RequireNode<Panel>("TopBar").AddThemeStyleboxOverride("panel", topBarShellStyle);
+        RequireNode<Panel>("SidebarPanel").AddThemeStyleboxOverride("panel", sidebarShellStyle);
+        RequireNode<Panel>("ContentPanel").AddThemeStyleboxOverride("panel", shellStyle);
+        var tabSelectedStyle = new StyleBoxFlat
+        {
+            BgColor = selected,
+            BorderColor = selectedBorder,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 12,
+            CornerRadiusTopRight = 12,
+            CornerRadiusBottomLeft = 12,
+            CornerRadiusBottomRight = 12,
+            ContentMarginLeft = 14,
+            ContentMarginTop = 8,
+            ContentMarginRight = 14,
+            ContentMarginBottom = 8
+        };
+        var tabUnselectedStyle = new StyleBoxFlat
+        {
+            BgColor = panelSoft,
+            BorderColor = border,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 12,
+            CornerRadiusTopRight = 12,
+            CornerRadiusBottomLeft = 12,
+            CornerRadiusBottomRight = 12,
+            ContentMarginLeft = 14,
+            ContentMarginTop = 8,
+            ContentMarginRight = 14,
+            ContentMarginBottom = 8
+        };
+        var tabHoverStyle = new StyleBoxFlat
+        {
+            BgColor = inputHover,
+            BorderColor = border,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            CornerRadiusTopLeft = 12,
+            CornerRadiusTopRight = 12,
+            CornerRadiusBottomLeft = 12,
+            CornerRadiusBottomRight = 12,
+            ContentMarginLeft = 14,
+            ContentMarginTop = 8,
+            ContentMarginRight = 14,
+            ContentMarginBottom = 8
+        };
+        _mainTabs.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color(1f, 1f, 1f, 0f) });
+        _mainTabs.AddThemeStyleboxOverride("tab_selected", tabSelectedStyle);
+        _mainTabs.AddThemeStyleboxOverride("tab_unselected", tabUnselectedStyle);
+        _mainTabs.AddThemeStyleboxOverride("tab_hovered", tabHoverStyle);
+        _mainTabs.AddThemeStyleboxOverride("tab_disabled", tabUnselectedStyle);
+        _mainTabs.AddThemeColorOverride("font_selected_color", primaryText);
+        _mainTabs.AddThemeColorOverride("font_unselected_color", secondaryText);
+        _mainTabs.AddThemeColorOverride("font_hovered_color", primaryText);
+        _mainTabs.AddThemeColorOverride("font_disabled_color", subtleText);
+
+        _inputDialogLineEdit.AddThemeStyleboxOverride("normal", _inputSurfaceStyle);
+        _inputDialogLineEdit.AddThemeStyleboxOverride("focus", _inputFocusSurfaceStyle);
+        _inputDialogLineEdit.AddThemeStyleboxOverride("read_only", _inputSurfaceStyle);
+        _inputDialogLineEdit.AddThemeColorOverride("font_color", primaryText);
+        _inputDialogLineEdit.AddThemeColorOverride("font_placeholder_color", subtleText);
+        _searchBox.AddThemeStyleboxOverride("normal", _inputSurfaceStyle);
+        _searchBox.AddThemeStyleboxOverride("focus", _inputFocusSurfaceStyle);
+        _searchBox.AddThemeStyleboxOverride("read_only", _inputSurfaceStyle);
+        _searchBox.AddThemeColorOverride("font_color", primaryText);
+        _searchBox.AddThemeColorOverride("font_placeholder_color", subtleText);
+        _libraryTree.AddThemeColorOverride("font_color", primaryText);
+        _libraryTree.AddThemeColorOverride("guide_color", guideColor);
+        _trashList.AddThemeColorOverride("font_color", primaryText);
+        _trashList.AddThemeColorOverride("font_selected_color", primaryText);
+        _saveStatusLabel.AddThemeColorOverride("font_color", secondaryText);
+        _statusLabel.AddThemeColorOverride("font_color", secondaryText);
+        _csvExportPathLabel.AddThemeColorOverride("font_color", secondaryText);
+        _trashCountLabel.AddThemeColorOverride("font_color", secondaryText);
+        _outlineHintLabel?.AddThemeColorOverride("font_color", subtleText);
+        _mindMapHintLabel?.AddThemeColorOverride("font_color", subtleText);
+        TryNode<Label>("CsvHintLabel")?.AddThemeColorOverride("font_color", secondaryText);
+        TryNode<Label>("MindMapHint")?.AddThemeColorOverride("font_color", secondaryText);
+        ApplyLabelColorIfPresent("BrandTitle", primaryText);
+        ApplyLabelColorIfPresent("BrandSubtitle", secondaryText);
+        ApplyLabelColorIfPresent("VaultLabel", primaryText);
+        ApplyLabelColorIfPresent("SidebarMiniInfo", secondaryText);
+        ApplyLabelColorIfPresent("LibraryHeader", primaryText);
+        ApplyLabelColorIfPresent("SidebarRuleLabel", secondaryText);
+        ApplyLabelColorIfPresent("TrashLabel", primaryText);
+        _localeLabel?.AddThemeColorOverride("font_color", secondaryText);
+        _themeLabel?.AddThemeColorOverride("font_color", secondaryText);
+        _localeSwitcher?.AddThemeStyleboxOverride("normal", _softButtonStyle);
+        _localeSwitcher?.AddThemeStyleboxOverride("hover", _softButtonHoverStyle);
+        _localeSwitcher?.AddThemeStyleboxOverride("pressed", _softButtonHoverStyle);
+        _localeSwitcher?.AddThemeStyleboxOverride("focus", _softButtonStyle);
+        _localeSwitcher?.AddThemeColorOverride("font_color", primaryText);
+        _localeSwitcher?.AddThemeColorOverride("font_hover_color", primaryText);
+        _localeSwitcher?.AddThemeColorOverride("font_pressed_color", primaryText);
+        _localeSwitcher?.AddThemeColorOverride("font_focus_color", primaryText);
+        _localeSwitcher?.AddThemeColorOverride("font_disabled_color", subtleText);
+        _themeSwitcher?.AddThemeStyleboxOverride("normal", _softButtonStyle);
+        _themeSwitcher?.AddThemeStyleboxOverride("hover", _softButtonHoverStyle);
+        _themeSwitcher?.AddThemeStyleboxOverride("pressed", _softButtonHoverStyle);
+        _themeSwitcher?.AddThemeStyleboxOverride("focus", _softButtonStyle);
+        _themeSwitcher?.AddThemeColorOverride("font_color", primaryText);
+        _themeSwitcher?.AddThemeColorOverride("font_hover_color", primaryText);
+        _themeSwitcher?.AddThemeColorOverride("font_pressed_color", primaryText);
+        _themeSwitcher?.AddThemeColorOverride("font_focus_color", primaryText);
+        _themeSwitcher?.AddThemeColorOverride("font_disabled_color", subtleText);
+        _contentSearchCheck.AddThemeColorOverride("font_color", primaryText);
+        _contentSearchCheck.AddThemeColorOverride("font_hover_color", primaryText);
+        _contentSearchCheck.AddThemeColorOverride("font_pressed_color", primaryText);
+        _contentSearchCheck.AddThemeColorOverride("font_focus_color", primaryText);
+        _contentSearchCheck.AddThemeColorOverride("font_disabled_color", subtleText);
+        _libraryContextMenu.AddThemeStyleboxOverride("panel", _treePanelStyle);
+        _libraryContextMenu.AddThemeColorOverride("font_color", primaryText);
+        _libraryContextMenu.AddThemeColorOverride("font_hover_color", primaryText);
+        _libraryContextMenu.AddThemeColorOverride("font_disabled_color", subtleText);
+        _libraryContextMenu.AddThemeColorOverride("separator_color", border);
+        RequireNode<PanelContainer>("OutlineViewport").AddThemeStyleboxOverride("panel", _toolbarSurfaceStyle);
+        ConfigureCsvSheetChrome();
+        ConfigureOverlayDialogs();
+
+        if (TryNode<Button>("ClearSearchButton") is { } clearSearchButton)
+        {
+            ApplySoftButtonStyle(clearSearchButton);
+        }
+        ApplySoftButtonStyle(_contentSearchCheck);
+        if (TryNode<Button>("NewFolderButton") is { } newFolderButton)
+        {
+            ApplySoftButtonStyle(newFolderButton);
+        }
+        if (TryNode<Button>("DeleteButton") is { } deleteButton)
+        {
+            ApplySoftButtonStyle(deleteButton, useDestructiveStyle: true);
+        }
+        if (TryNode<Button>("RestoreButton") is { } restoreButton)
+        {
+            ApplySoftButtonStyle(restoreButton);
+        }
+        if (TryNode<Button>("PurgeButton") is { } purgeButton)
+        {
+            ApplySoftButtonStyle(purgeButton, useDestructiveStyle: true);
+        }
+        if (TryNode<Button>("AddMindMapChildButton") is { } addChildButton)
+        {
+            ApplySoftButtonStyle(addChildButton);
+        }
+        if (TryNode<Button>("AddMindMapSiblingButton") is { } addSiblingButton)
+        {
+            ApplySoftButtonStyle(addSiblingButton);
+        }
+        if (TryNode<Button>("RenameMindMapNodeButton") is { } renameMindNodeButton)
+        {
+            ApplySoftButtonStyle(renameMindNodeButton);
+        }
+        if (TryNode<Button>("DeleteMindMapNodeButton") is { } deleteMindNodeButton)
+        {
+            ApplySoftButtonStyle(deleteMindNodeButton, useDestructiveStyle: true);
+        }
+        if (TryNode<Button>("GenerateMindMapButton") is { } generateMindMapButton)
+        {
+            ApplySoftButtonStyle(generateMindMapButton);
+        }
+        if (TryNode<Button>("ExportOutlineMdButton") is { } exportOutlineMdButton)
+        {
+            ApplySoftButtonStyle(exportOutlineMdButton);
+        }
+        if (TryNode<Button>("ExportMindMapButton") is { } exportMindMapButton)
+        {
+            ApplySoftButtonStyle(exportMindMapButton);
+        }
+        if (TryNode<Button>("ExportCsvButton") is { } exportCsvButton)
+        {
+            ApplySoftButtonStyle(exportCsvButton);
+        }
+        if (TryNode<Button>("NewDocumentButton") is { } newDocumentButton)
+        {
+            ApplyPrimaryButtonStyle(newDocumentButton);
+        }
+
+        foreach (var child in _libraryList.GetChildren())
+        {
+            if (child is LibraryItemRow row)
+            {
+                row.ApplyTheme(primaryText, secondaryText, secondaryText, subtleText, selected, selectedBorder, inputHover, selectedBorder);
+            }
+        }
+
+        _mindMapCanvas.ApplyTheme(isDark, panel, border, borderSoft, primaryText, secondaryText, selectedBorder);
+        RenderOutlineList(_focusedOutlineItemId);
+        RenderCsvPreview(_structureParser.Parse(BuildMarkdownFromState()).ToArray());
+
         ApplyLocalizedText();
     }
 
@@ -1224,11 +1590,28 @@ public partial class Main : Control
         _suppressEvents = false;
     }
 
+    private void OnThemeSelected(long index)
+    {
+        if (_suppressEvents)
+        {
+            return;
+        }
+
+        var mode = (ThemeMode)Math.Clamp((int)index, 0, 2);
+        ApplyThemeMode(mode);
+        SaveThemeMode(mode);
+        SetStatusKey("status.ready");
+    }
+
     private void ApplyLocalizedText()
     {
         if (_localeLabel is not null)
         {
             _localeLabel.Text = T("locale.label");
+        }
+        if (_themeLabel is not null)
+        {
+            _themeLabel.Text = T("theme.label");
         }
 
         _mainTabs.SetTabTitle(0, T("tabs.outline"));
@@ -1274,15 +1657,16 @@ public partial class Main : Control
     {
         var baseStyle = useDestructiveStyle ? _destructiveButtonStyle : _softButtonStyle;
         var disabledStyle = useDestructiveStyle ? _destructiveButtonDisabledStyle : _softButtonDisabledStyle;
+        var destructiveText = _themeService.ResolveEffectiveMode() == ThemeMode.Dark ? new Color("f3b1a5") : new Color("b35a48");
         button.AddThemeStyleboxOverride("normal", baseStyle);
         button.AddThemeStyleboxOverride("hover", _softButtonHoverStyle);
         button.AddThemeStyleboxOverride("pressed", _softButtonHoverStyle);
         button.AddThemeStyleboxOverride("focus", baseStyle);
         button.AddThemeStyleboxOverride("disabled", disabledStyle);
-        button.AddThemeColorOverride("font_color", useDestructiveStyle ? new Color("b35a48") : _primaryTextColor);
-        button.AddThemeColorOverride("font_hover_color", useDestructiveStyle ? new Color("b35a48") : _primaryTextColor);
+        button.AddThemeColorOverride("font_color", useDestructiveStyle ? destructiveText : _primaryTextColor);
+        button.AddThemeColorOverride("font_hover_color", useDestructiveStyle ? destructiveText : _primaryTextColor);
         button.AddThemeColorOverride("font_pressed_color", useDestructiveStyle ? Colors.White : _primaryTextColor);
-        button.AddThemeColorOverride("font_focus_color", useDestructiveStyle ? new Color("b35a48") : _primaryTextColor);
+        button.AddThemeColorOverride("font_focus_color", useDestructiveStyle ? destructiveText : _primaryTextColor);
         button.AddThemeColorOverride("font_disabled_color", _subtleTextColor);
     }
 
@@ -1509,6 +1893,15 @@ public partial class Main : Control
 
         var row = _libraryItemRowScene.Instantiate<LibraryItemRow>();
         _libraryList.AddChild(row);
+        row.ApplyTheme(
+            _primaryTextColor,
+            _secondaryTextColor,
+            _secondaryTextColor,
+            _subtleTextColor,
+            _treeSelectedStyle.BgColor,
+            _treeSelectedStyle.BorderColor,
+            _softButtonHoverStyle.BgColor,
+            _treeSelectedStyle.BorderColor);
         row.ApplyState(
             node.RelativePath,
             node.IsDirectory,
@@ -1898,7 +2291,7 @@ public partial class Main : Control
                 VerticalAlignment = VerticalAlignment.Top
             };
             bullet.Text = "-";
-            bullet.Modulate = item.Depth == 0 ? new Color("3d4c63") : new Color("8a93a5");
+            bullet.AddThemeColorOverride("font_color", item.Depth == 0 ? _primaryTextColor : _secondaryTextColor);
             bullet.AddThemeFontSizeOverride("font_size", item.Depth == 0 ? 18 : 16);
             row.AddChild(bullet);
 
@@ -1915,7 +2308,7 @@ public partial class Main : Control
             editor.AddThemeStyleboxOverride("focus", _outlineItemFocusStyle);
             editor.AddThemeStyleboxOverride("read_only", _outlineItemStyle);
             editor.AddThemeColorOverride("font_color", _primaryTextColor);
-            editor.AddThemeColorOverride("font_placeholder_color", new Color("9aa4b2"));
+            editor.AddThemeColorOverride("font_placeholder_color", _subtleTextColor);
             editor.AddThemeColorOverride("font_selected_color", Colors.White);
             editor.AddThemeColorOverride("selection_color", new Color("3d5afe"));
             editor.AddThemeColorOverride("caret_color", _primaryTextColor);
@@ -1967,12 +2360,13 @@ public partial class Main : Control
             var row = _outlineItemRowScene.Instantiate<OutlineItemRow>();
             _outlineList.AddChild(row);
             row.ApplyState(item.Depth, item.Text, T("outline.itemPlaceholder"));
+            row.ApplyTheme(_primaryTextColor, _secondaryTextColor);
             var editor = row.Editor;
             editor.AddThemeStyleboxOverride("normal", _outlineItemStyle);
             editor.AddThemeStyleboxOverride("focus", _outlineItemFocusStyle);
             editor.AddThemeStyleboxOverride("read_only", _outlineItemStyle);
             editor.AddThemeColorOverride("font_color", _primaryTextColor);
-            editor.AddThemeColorOverride("font_placeholder_color", new Color("9aa4b2"));
+            editor.AddThemeColorOverride("font_placeholder_color", _subtleTextColor);
             editor.AddThemeColorOverride("font_selected_color", Colors.White);
             editor.AddThemeColorOverride("selection_color", new Color("3d5afe"));
             editor.AddThemeColorOverride("caret_color", _primaryTextColor);
@@ -3528,7 +3922,7 @@ public partial class Main : Control
                 VerticalAlignment = VerticalAlignment.Center,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
-            headerLabel.AddThemeColorOverride("font_color", new Color("1f2937"));
+            headerLabel.AddThemeColorOverride("font_color", _primaryTextColor);
             headerLabel.AddThemeFontSizeOverride("font_size", 13);
             headerCell.AddChild(headerLabel);
             headerRow.AddChild(headerCell);
@@ -3570,7 +3964,7 @@ public partial class Main : Control
                     ClipText = true,
                     VerticalAlignment = VerticalAlignment.Center
                 };
-                label.AddThemeColorOverride("font_color", new Color("1f2937"));
+                label.AddThemeColorOverride("font_color", _primaryTextColor);
                 label.AddThemeFontSizeOverride("font_size", 13);
                 cell.AddChild(label);
                 row.AddChild(cell);
@@ -4062,7 +4456,7 @@ public partial class Main : Control
         editor.GrabFocus();
     }
 
-    private static Control BuildOutlineIndentGuides(int depth)
+    private Control BuildOutlineIndentGuides(int depth)
     {
         if (depth <= 0)
         {
@@ -4086,7 +4480,7 @@ public partial class Main : Control
             };
             var guide = new ColorRect
             {
-                Color = new Color("e2e6ee"),
+                Color = _softButtonDisabledStyle.BorderColor,
                 CustomMinimumSize = new Vector2(1, 0),
                 SizeFlagsVertical = SizeFlags.ExpandFill
             };
