@@ -83,9 +83,16 @@ public sealed class LocalizationService
         }
 
         var json = file.GetAsText();
-        var table = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-            ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        _tables[locale] = new Dictionary<string, string>(table, StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var table = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _tables[locale] = new Dictionary<string, string>(table, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            _tables[locale] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     private static string LoadPersistedLocale()

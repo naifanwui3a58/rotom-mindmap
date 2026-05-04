@@ -16,6 +16,8 @@ public sealed class MindMapNodeViewModel
 
     public Vector2 Position { get; set; }
 
+    public Vector2? CustomSize { get; set; }
+
     public bool IsRoot { get; set; }
 
     public MindMapConnectorSide? IncomingParentSide { get; set; }

@@ -12,6 +12,31 @@ public partial class MindMapCanvas : Control
 {
     private const string RootNodeId = "__document_root__";
     private const float ExportPadding = 48f;
+    private const float ResizeEdgeHitThickness = 10f;
+
+    private enum ResizeEdge
+    {
+        None,
+        Left,
+        Top,
+        Right,
+        Bottom
+    }
+
+    private sealed partial class HandleOverlay : Control
+    {
+        public MindMapCanvas? OwnerCanvas { get; set; }
+
+        public HandleOverlay()
+        {
+            MouseFilter = MouseFilterEnum.Ignore;
+        }
+
+        public override void _Draw()
+        {
+            OwnerCanvas?.DrawVisibleHandles(this);
+        }
+    }
 
     [Signal]
     public delegate void NodeMovedEventHandler(string nodeId, Vector2 position);
@@ -25,6 +50,9 @@ public partial class MindMapCanvas : Control
         string parentNodeId,
         int parentSide,
         int childSide);
+
+    [Signal]
+    public delegate void NodeResizedEventHandler(string nodeId, Vector2 position, Vector2 size);
 
     [Signal]
     public delegate void ZoomChangedEventHandler(float zoom);
@@ -41,9 +69,7 @@ public partial class MindMapCanvas : Control
 
         public Label? BodyLabel { get; init; }
 
-        public required Vector2 BaseSize { get; init; }
-
-        public required Dictionary<MindMapConnectorSide, Button> Handles { get; init; }
+        public required Vector2 BaseSize { get; set; }
     }
 
     private readonly Dictionary<string, NodeCardState> _cards = new(StringComparer.Ordinal);
@@ -63,6 +89,11 @@ public partial class MindMapCanvas : Control
     private string _selectedNodeId = string.Empty;
     private string _draggingNodeId = string.Empty;
     private Vector2 _dragMouseOffset;
+    private string _resizingNodeId = string.Empty;
+    private ResizeEdge _resizingEdge = ResizeEdge.None;
+    private Vector2 _resizeStartMousePosition;
+    private Vector2 _resizeStartSize;
+    private Vector2 _resizeStartPosition;
     private bool _isPanning;
     private Vector2 _panStartMousePosition;
     private Vector2 _panOffset = new(80f, 80f);
@@ -70,6 +101,7 @@ public partial class MindMapCanvas : Control
     private MindMapConnectorSide? _armedChildSide;
     private float _zoom = 1f;
     private string _dragPreviewTargetId = string.Empty;
+    private HandleOverlay? _handleOverlay;
 
     public override void _Ready()
     {
@@ -157,6 +189,7 @@ public partial class MindMapCanvas : Control
         }
 
         QueueRedraw();
+        _handleOverlay?.QueueRedraw();
     }
 
     public void RenderNodes(IReadOnlyList<MindMapNodeViewModel> nodes, float zoom)
@@ -168,6 +201,7 @@ public partial class MindMapCanvas : Control
             child.QueueFree();
         }
 
+        _handleOverlay = null;
         _cards.Clear();
         _edges.Clear();
 
@@ -182,9 +216,7 @@ public partial class MindMapCanvas : Control
         var maxY = 640f;
         foreach (var node in nodes)
         {
-            var baseSize = node.IsRoot
-                ? new Vector2(220f, 84f)
-                : new Vector2(180f, string.IsNullOrWhiteSpace(node.Body) ? 72f : 96f);
+            var baseSize = EstimateNodeSize(node);
             var card = CreateCard(node, baseSize);
             _cards[node.Id] = card;
             ApplyCardVisual(card);
@@ -201,6 +233,8 @@ public partial class MindMapCanvas : Control
                 _edges.Add((node.ParentId, node.Id));
             }
         }
+
+        EnsureHandleOverlay();
 
         CustomMinimumSize = new Vector2(maxX, maxY);
         RefreshHandleVisibility();
@@ -247,6 +281,7 @@ public partial class MindMapCanvas : Control
                 DrawCircle(end, Math.Max(2.4f, 3.4f * _zoom), _edgeEndHandleColor);
             }
         }
+
     }
 
     public override void _GuiInput(InputEvent @event)
@@ -283,9 +318,31 @@ public partial class MindMapCanvas : Control
             return;
         }
 
-        var hitNodeId = HitTest(button.Position);
         if (button.Pressed)
         {
+            if (TryHitHandle(button.Position, out var hitHandleNodeId, out var hitHandleSide))
+            {
+                OnHandlePressed(hitHandleNodeId, hitHandleSide);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+
+            if (TryHitResizeEdge(button.Position, out var resizeNodeId, out var resizeEdge))
+            {
+                _selectedNodeId = resizeNodeId;
+                _resizingNodeId = resizeNodeId;
+                _resizingEdge = resizeEdge;
+                _resizeStartMousePosition = button.Position;
+                _resizeStartSize = _cards[resizeNodeId].BaseSize;
+                _resizeStartPosition = _cards[resizeNodeId].Node.Position;
+                _armedChildSide = null;
+                _dragPreviewTargetId = string.Empty;
+                RefreshHandleVisibility();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+
+            var hitNodeId = HitTest(button.Position);
             if (button.ShiftPressed && !string.IsNullOrWhiteSpace(_selectedNodeId))
             {
                 EmitSignal(SignalName.NodeReparented, _selectedNodeId, hitNodeId);
@@ -323,6 +380,18 @@ public partial class MindMapCanvas : Control
         }
 
         _isPanning = false;
+        if (!string.IsNullOrWhiteSpace(_resizingNodeId) && _cards.TryGetValue(_resizingNodeId, out var resizedCard))
+        {
+            var resizedNodeId = _resizingNodeId;
+            _resizingNodeId = string.Empty;
+            _resizingEdge = ResizeEdge.None;
+            EmitSignal(SignalName.NodeResized, resizedNodeId, resizedCard.Node.Position, resizedCard.BaseSize);
+            QueueRedraw();
+            _handleOverlay?.QueueRedraw();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_draggingNodeId) || !_cards.TryGetValue(_draggingNodeId, out var draggingCard))
         {
             return;
@@ -348,6 +417,13 @@ public partial class MindMapCanvas : Control
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(_resizingNodeId) && _cards.TryGetValue(_resizingNodeId, out var resizingCard))
+        {
+            ApplyResize(resizingCard, motion.Position);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_draggingNodeId) || !_cards.TryGetValue(_draggingNodeId, out var card))
         {
             return;
@@ -361,6 +437,7 @@ public partial class MindMapCanvas : Control
             ApplyCardVisual(currentCard);
         }
         QueueRedraw();
+        _handleOverlay?.QueueRedraw();
         GetViewport().SetInputAsHandled();
     }
 
@@ -396,6 +473,7 @@ public partial class MindMapCanvas : Control
                 Math.Max(640f, _cards.Values.Max(card => GetViewRect(card.Node.Id).End.Y) + 140f));
         }
         QueueRedraw();
+        _handleOverlay?.QueueRedraw();
         EmitSignal(SignalName.ZoomChanged, _zoom);
     }
 
@@ -462,10 +540,6 @@ public partial class MindMapCanvas : Control
 
         AddChild(panel);
 
-        var handles = Enum
-            .GetValues<MindMapConnectorSide>()
-            .ToDictionary(side => side, side => CreateHandle(node.Id, side));
-
         return new NodeCardState
         {
             Node = node,
@@ -473,28 +547,8 @@ public partial class MindMapCanvas : Control
             Margin = margin,
             TitleLabel = title,
             BodyLabel = body,
-            BaseSize = baseSize,
-            Handles = handles
+            BaseSize = baseSize
         };
-    }
-
-    private Button CreateHandle(string nodeId, MindMapConnectorSide side)
-    {
-        var handle = new Button
-        {
-            Text = string.Empty,
-            FocusMode = FocusModeEnum.None,
-            MouseDefaultCursorShape = CursorShape.PointingHand,
-            CustomMinimumSize = new Vector2(16f, 16f),
-            Size = new Vector2(16f, 16f),
-            Visible = false
-        };
-        handle.AddThemeStyleboxOverride("normal", _handleStyle);
-        handle.AddThemeStyleboxOverride("hover", _handleActiveStyle);
-        handle.AddThemeStyleboxOverride("pressed", _handleActiveStyle);
-        handle.Pressed += () => OnHandlePressed(nodeId, side);
-        AddChild(handle);
-        return handle;
     }
 
     private void OnHandlePressed(string nodeId, MindMapConnectorSide side)
@@ -524,14 +578,15 @@ public partial class MindMapCanvas : Control
     private void ApplyCardVisual(NodeCardState state)
     {
         var rect = GetViewRect(state.Node.Id);
-        var horizontalPadding = Mathf.RoundToInt(Math.Max(8f, 16f * _zoom));
-        var verticalPadding = Mathf.RoundToInt(Math.Max(6f, 14f * _zoom));
-        var contentWidth = Math.Max(56f, rect.Size.X - horizontalPadding * 2f);
-        var handleSize = Math.Max(10f, 16f * _zoom);
+        const int horizontalPadding = 16;
+        const int verticalPadding = 14;
+        var contentWidth = Math.Max(56f, state.BaseSize.X - horizontalPadding * 2f);
 
         state.Panel.Position = rect.Position;
-        state.Panel.Size = rect.Size;
-        state.Panel.CustomMinimumSize = rect.Size;
+        state.Panel.Size = state.BaseSize;
+        state.Panel.CustomMinimumSize = state.BaseSize;
+        state.Panel.Scale = new Vector2(_zoom, _zoom);
+        state.Panel.PivotOffset = Vector2.Zero;
         state.Margin.AddThemeConstantOverride("margin_left", horizontalPadding);
         state.Margin.AddThemeConstantOverride("margin_top", verticalPadding);
         state.Margin.AddThemeConstantOverride("margin_right", horizontalPadding);
@@ -539,26 +594,15 @@ public partial class MindMapCanvas : Control
         var isSelected = state.Node.Id == _selectedNodeId;
         var isPreviewTarget = state.Node.Id == _dragPreviewTargetId && state.Node.Id != _draggingNodeId;
         state.Panel.AddThemeStyleboxOverride("panel", BuildStyle(state.Node.IsRoot, isSelected, isPreviewTarget));
-        state.TitleLabel.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(state.Node.IsRoot ? 18f * _zoom : 14f * _zoom));
+        state.TitleLabel.AddThemeFontSizeOverride("font_size", state.Node.IsRoot ? 18 : 14);
         state.TitleLabel.AddThemeColorOverride("font_color", _titleTextColor);
         state.TitleLabel.CustomMinimumSize = new Vector2(contentWidth, 0f);
 
         if (state.BodyLabel is not null)
         {
-            state.BodyLabel.AddThemeFontSizeOverride("font_size", Mathf.RoundToInt(11f * _zoom));
+            state.BodyLabel.AddThemeFontSizeOverride("font_size", 11);
             state.BodyLabel.AddThemeColorOverride("font_color", _bodyTextColor);
             state.BodyLabel.CustomMinimumSize = new Vector2(contentWidth, 0f);
-        }
-
-        foreach (var (side, handle) in state.Handles)
-        {
-            var center = GetAnchorForSide(rect, side, 0f);
-            handle.CustomMinimumSize = new Vector2(handleSize, handleSize);
-            handle.Size = new Vector2(handleSize, handleSize);
-            handle.Position = center - handle.Size / 2f;
-            handle.AddThemeStyleboxOverride(
-                "normal",
-                state.Node.Id == _selectedNodeId && _armedChildSide == side ? _handleActiveStyle : _handleStyle);
         }
     }
 
@@ -591,28 +635,54 @@ public partial class MindMapCanvas : Control
         }
 
         QueueRedraw();
+        _handleOverlay?.QueueRedraw();
+    }
+
+    private void ApplyResize(NodeCardState state, Vector2 currentMousePosition)
+    {
+        var logicalDelta = (currentMousePosition - _resizeStartMousePosition) / _zoom;
+        var minSize = GetMinimumNodeSize(state.Node);
+        var nextPosition = _resizeStartPosition;
+        var nextSize = _resizeStartSize;
+
+        switch (_resizingEdge)
+        {
+            case ResizeEdge.Left:
+            {
+                var maxDelta = _resizeStartSize.X - minSize.X;
+                var clampedDelta = Math.Clamp(logicalDelta.X, -100000f, maxDelta);
+                nextPosition.X = _resizeStartPosition.X + clampedDelta;
+                nextSize.X = _resizeStartSize.X - clampedDelta;
+                break;
+            }
+            case ResizeEdge.Top:
+            {
+                var maxDelta = _resizeStartSize.Y - minSize.Y;
+                var clampedDelta = Math.Clamp(logicalDelta.Y, -100000f, maxDelta);
+                nextPosition.Y = _resizeStartPosition.Y + clampedDelta;
+                nextSize.Y = _resizeStartSize.Y - clampedDelta;
+                break;
+            }
+            case ResizeEdge.Right:
+                nextSize.X = Math.Max(minSize.X, _resizeStartSize.X + logicalDelta.X);
+                break;
+            case ResizeEdge.Bottom:
+                nextSize.Y = Math.Max(minSize.Y, _resizeStartSize.Y + logicalDelta.Y);
+                break;
+        }
+
+        state.Node.Position = nextPosition;
+        state.BaseSize = nextSize;
+        state.Node.CustomSize = nextSize;
+        ApplyCardVisual(state);
+        QueueRedraw();
+        _handleOverlay?.QueueRedraw();
     }
 
     private void RefreshHandleVisibility()
     {
-        foreach (var card in _cards.Values)
-        {
-            var showOwnHandles = card.Node.Id == _selectedNodeId;
-            var showTargetHandles = _armedChildSide is not null && card.Node.Id != _selectedNodeId;
-            var visible = showOwnHandles || showTargetHandles;
-
-            foreach (var handle in card.Handles.Values)
-            {
-                handle.Visible = visible;
-            }
-        }
-
-        foreach (var card in _cards.Values)
-        {
-            ApplyCardVisual(card);
-        }
-
         QueueRedraw();
+        _handleOverlay?.QueueRedraw();
     }
 
     private string HitTest(Vector2 viewPosition)
@@ -634,10 +704,41 @@ public partial class MindMapCanvas : Control
         return new Rect2(_panOffset + card.Node.Position * _zoom, card.BaseSize * _zoom);
     }
 
+    private static Vector2 EstimateNodeSize(MindMapNodeViewModel node)
+    {
+        var width = node.CustomSize?.X ?? (node.IsRoot ? 260f : 220f);
+        var titleLines = EstimateLineCount(node.Title, width - 32f);
+        var bodyLines = string.IsNullOrWhiteSpace(node.Body) ? 0f : EstimateLineCount(node.Body, width - 32f);
+        var height = 28f + titleLines * 22f + bodyLines * 18f + (bodyLines > 0 ? 10f : 0f);
+        if (node.IsRoot)
+        {
+            height += 8f;
+        }
+
+        if (node.CustomSize is { } customSize)
+        {
+            height = Math.Max(height, customSize.Y);
+        }
+
+        return new Vector2(width, Math.Max(72f, height));
+    }
+
+    private static float EstimateLineCount(string text, float availableWidth)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 1f;
+        }
+
+        var length = text.Trim().Length;
+        var charsPerLine = Math.Max(8f, availableWidth / 14f);
+        return Math.Max(1f, (float)Math.Ceiling(length / charsPerLine));
+    }
+
     private Rect2 GetLogicalRect(string nodeId)
     {
         var card = _cards[nodeId];
-        return new Rect2(card.Node.Position, card.BaseSize);
+        return new Rect2(card.Node.Position, EstimateNodeSize(card.Node));
     }
 
     private Rect2 GetLogicalBounds()
@@ -666,6 +767,7 @@ public partial class MindMapCanvas : Control
                 Level = card.Node.Level,
                 IsRoot = card.Node.IsRoot,
                 Position = card.Node.Position,
+                CustomSize = card.BaseSize,
                 IncomingParentSide = card.Node.IncomingParentSide,
                 IncomingChildSide = card.Node.IncomingChildSide
             })
@@ -718,6 +820,189 @@ public partial class MindMapCanvas : Control
             MindMapConnectorSide.Left => new Vector2(rect.Position.X + inset, rect.Position.Y + rect.Size.Y / 2f),
             _ => rect.GetCenter()
         };
+    }
+
+    private float GetHandleDiameter()
+    {
+        return 14f;
+    }
+
+    private void DrawVisibleHandles(CanvasItem target)
+    {
+        var diameter = GetHandleDiameter();
+        var radius = diameter / 2f;
+
+        foreach (var card in _cards.Values)
+        {
+            if (!ShouldDrawHandlesForNode(card.Node.Id))
+            {
+                continue;
+            }
+
+            var rect = GetViewRect(card.Node.Id);
+            foreach (var side in Enum.GetValues<MindMapConnectorSide>())
+            {
+                var center = GetHandleCenter(rect, side, diameter);
+                var isActive = card.Node.Id == _selectedNodeId && _armedChildSide == side;
+                var fill = isActive ? _handleActiveStyle.BgColor : _handleStyle.BgColor;
+                var border = isActive ? _handleActiveStyle.BorderColor : _handleStyle.BorderColor;
+                target.DrawCircle(center, radius, fill);
+                target.DrawArc(center, radius, 0f, Mathf.Tau, 24, border, 0.95f, true);
+            }
+        }
+
+    }
+
+    private bool ShouldDrawHandlesForNode(string nodeId)
+    {
+        var showOwnHandles = nodeId == _selectedNodeId;
+        var showTargetHandles = _armedChildSide is not null && nodeId != _selectedNodeId;
+        return showOwnHandles || showTargetHandles;
+    }
+
+    private bool TryHitHandle(Vector2 viewPosition, out string nodeId, out MindMapConnectorSide side)
+    {
+        var diameter = GetHandleDiameter();
+        var radius = diameter / 2f;
+
+        foreach (var card in _cards.Values.Reverse())
+        {
+            if (!ShouldDrawHandlesForNode(card.Node.Id))
+            {
+                continue;
+            }
+
+            var rect = GetViewRect(card.Node.Id);
+            foreach (var currentSide in Enum.GetValues<MindMapConnectorSide>())
+            {
+                var center = GetHandleCenter(rect, currentSide, diameter);
+                if (center.DistanceTo(viewPosition) <= radius)
+                {
+                    nodeId = card.Node.Id;
+                    side = currentSide;
+                    return true;
+                }
+            }
+        }
+
+        nodeId = string.Empty;
+        side = MindMapConnectorSide.Top;
+        return false;
+    }
+
+    private static Vector2 GetHandleCenter(Rect2 rect, MindMapConnectorSide side, float diameter)
+    {
+        return GetAnchorForSide(rect, side, 0f);
+    }
+
+    private bool TryHitResizeEdge(Vector2 viewPosition, out string nodeId, out ResizeEdge edge)
+    {
+        foreach (var card in _cards.Values.Reverse())
+        {
+            if (card.Node.Id != _selectedNodeId)
+            {
+                continue;
+            }
+
+            var rect = GetViewRect(card.Node.Id);
+            edge = GetResizeEdgeHit(rect, viewPosition);
+            if (edge != ResizeEdge.None)
+            {
+                nodeId = card.Node.Id;
+                return true;
+            }
+        }
+
+        nodeId = string.Empty;
+        edge = ResizeEdge.None;
+        return false;
+    }
+
+    private static ResizeEdge GetResizeEdgeHit(Rect2 rect, Vector2 point)
+    {
+        if (!rect.Grow(ResizeEdgeHitThickness).HasPoint(point))
+        {
+            return ResizeEdge.None;
+        }
+
+        var leftDistance = Math.Abs(point.X - rect.Position.X);
+        var topDistance = Math.Abs(point.Y - rect.Position.Y);
+        var rightDistance = Math.Abs(point.X - rect.End.X);
+        var bottomDistance = Math.Abs(point.Y - rect.End.Y);
+        var bestDistance = ResizeEdgeHitThickness + 1f;
+        var edge = ResizeEdge.None;
+        var handleGap = 18f;
+        var centerX = rect.Position.X + rect.Size.X / 2f;
+        var centerY = rect.Position.Y + rect.Size.Y / 2f;
+
+        if (leftDistance <= ResizeEdgeHitThickness
+            && leftDistance < bestDistance
+            && Math.Abs(point.Y - centerY) > handleGap)
+        {
+            bestDistance = leftDistance;
+            edge = ResizeEdge.Left;
+        }
+        if (topDistance <= ResizeEdgeHitThickness
+            && topDistance < bestDistance
+            && Math.Abs(point.X - centerX) > handleGap)
+        {
+            bestDistance = topDistance;
+            edge = ResizeEdge.Top;
+        }
+        if (rightDistance <= ResizeEdgeHitThickness
+            && rightDistance < bestDistance
+            && Math.Abs(point.Y - centerY) > handleGap)
+        {
+            bestDistance = rightDistance;
+            edge = ResizeEdge.Right;
+        }
+        if (bottomDistance <= ResizeEdgeHitThickness
+            && bottomDistance < bestDistance
+            && Math.Abs(point.X - centerX) > handleGap)
+        {
+            edge = ResizeEdge.Bottom;
+        }
+
+        return edge;
+    }
+
+    private static Vector2 GetMinimumNodeSize(MindMapNodeViewModel node)
+    {
+        var estimated = EstimateNodeSize(new MindMapNodeViewModel
+        {
+            Id = node.Id,
+            ParentId = node.ParentId,
+            Title = node.Title,
+            Body = node.Body,
+            Level = node.Level,
+            Position = node.Position,
+            CustomSize = null,
+            IsRoot = node.IsRoot,
+            IncomingParentSide = node.IncomingParentSide,
+            IncomingChildSide = node.IncomingChildSide
+        });
+
+        return new Vector2(Math.Max(180f, estimated.X), Math.Max(72f, estimated.Y));
+    }
+
+    private static Vector2 SnapToPixel(Vector2 value)
+    {
+        return new Vector2(MathF.Round(value.X), MathF.Round(value.Y));
+    }
+
+    private void EnsureHandleOverlay()
+    {
+        _handleOverlay = new HandleOverlay
+        {
+            Name = "HandleOverlay",
+            OwnerCanvas = this,
+            Size = CustomMinimumSize,
+            CustomMinimumSize = CustomMinimumSize,
+            ZIndex = 100
+        };
+        _handleOverlay.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(_handleOverlay);
+        MoveChild(_handleOverlay, -1);
     }
 
     private static Vector2 GetDirectionalAnchor(Rect2 rect, Vector2 direction, float padding)

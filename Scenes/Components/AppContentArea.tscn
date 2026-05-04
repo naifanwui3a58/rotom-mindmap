@@ -141,6 +141,12 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("StylePillButton")
 text = ""
 
+[node name="MindMapLayoutModeButton" type="Button" parent="ContentBox/MainTabs/MindMapTab/MindMapToolbar"]
+custom_minimum_size = Vector2(92, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StylePillButton")
+text = ""
+
 [node name="MindMapScroll" type="ScrollContainer" parent="ContentBox/MainTabs/MindMapTab"]
 custom_minimum_size = Vector2(0, 620)
 layout_mode = 2

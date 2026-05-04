@@ -115,6 +115,7 @@ public partial class Main : Control
     private Button _addMindMapSiblingButton = null!;
     private Button _renameMindMapNodeButton = null!;
     private Button _deleteMindMapNodeButton = null!;
+    private Button? _mindMapLayoutModeButton;
     private OptionButton? _localeSwitcher;
     private Label? _localeLabel;
     private OptionButton? _themeSwitcher;
@@ -230,6 +231,7 @@ public partial class Main : Control
         _addMindMapSiblingButton = RequireNode<Button>("AddMindMapSiblingButton");
         _renameMindMapNodeButton = RequireNode<Button>("RenameMindMapNodeButton");
         _deleteMindMapNodeButton = RequireNode<Button>("DeleteMindMapNodeButton");
+        _mindMapLayoutModeButton = TryNode<Button>("MindMapLayoutModeButton");
         _localeSwitcher = TryNode<OptionButton>("LocaleSwitcher");
         _localeLabel = TryNode<Label>("LocaleLabel");
         _themeSwitcher = TryNode<OptionButton>("ThemeSwitcher");
@@ -362,6 +364,10 @@ public partial class Main : Control
         _addMindMapSiblingButton.Pressed += OnAddMindMapSiblingPressed;
         _renameMindMapNodeButton.Pressed += OnRenameMindMapNodePressed;
         _deleteMindMapNodeButton.Pressed += OnDeleteMindMapNodePressed;
+        if (_mindMapLayoutModeButton is not null)
+        {
+            _mindMapLayoutModeButton.Pressed += OnMindMapLayoutModePressed;
+        }
 
         _searchBox.TextChanged += OnSearchChanged;
         _contentSearchCheck.Toggled += _ => RefreshLibraryView(GetCurrentSelectionPath());
@@ -376,6 +382,7 @@ public partial class Main : Control
         _mindMapCanvas.NodeMoved += OnMindMapNodeMoved;
         _mindMapCanvas.NodeReparented += OnMindMapNodeReparented;
         _mindMapCanvas.ConnectionChanged += OnMindMapConnectionChanged;
+        _mindMapCanvas.NodeResized += OnMindMapNodeResized;
         _mindMapCanvas.ZoomChanged += OnMindMapZoomChanged;
         if (GetWindow() is { } window)
         {
@@ -1186,6 +1193,10 @@ public partial class Main : Control
         {
             ApplySoftButtonStyle(generateMindMapButton);
         }
+        if (TryNode<Button>("MindMapLayoutModeButton") is { } layoutModeButton)
+        {
+            ApplySoftButtonStyle(layoutModeButton);
+        }
         if (TryNode<Button>("ExportOutlineMdButton") is { } exportOutlineMdButton)
         {
             ApplySoftButtonStyle(exportOutlineMdButton);
@@ -1531,6 +1542,10 @@ public partial class Main : Control
         {
             ApplySoftButtonStyle(generateMindMapButton);
         }
+        if (TryNode<Button>("MindMapLayoutModeButton") is { } layoutModeButton)
+        {
+            ApplySoftButtonStyle(layoutModeButton);
+        }
         if (TryNode<Button>("ExportOutlineMdButton") is { } exportOutlineMdButton)
         {
             ApplySoftButtonStyle(exportOutlineMdButton);
@@ -1636,6 +1651,7 @@ public partial class Main : Control
         SetButtonTextIfPresent("RenameMindMapNodeButton", T("mindmap.rename"));
         SetButtonTextIfPresent("DeleteMindMapNodeButton", T("mindmap.delete"));
         SetButtonTextIfPresent("GenerateMindMapButton", T("mindmap.regenerate"));
+        SetButtonTextIfPresent("MindMapLayoutModeButton", GetMindMapLayoutModeLabel());
         SetButtonTextIfPresent("ExportOutlineMdButton", T("outline.exportMd"));
         SetButtonTextIfPresent("ExportMindMapButton", T("mindmap.export"));
         SetButtonTextIfPresent("ExportCsvButton", T("csv.export"));
@@ -1956,11 +1972,7 @@ public partial class Main : Control
     {
         UpdateLibrarySelection(relativePath, isDirectory);
         SyncLibraryRowSelection();
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Rename), false);
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Delete), false);
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.OpenLocation), false);
-        _libraryContextMenu.Position = new Vector2I((int)globalPosition.X, (int)globalPosition.Y);
-        _libraryContextMenu.Popup();
+        ShowLibraryContextMenu(globalPosition, allowRename: true, allowDelete: true, allowOpenLocation: true);
     }
 
     private void OnLibraryRowExpansionToggled(string relativePath)
@@ -2056,11 +2068,7 @@ public partial class Main : Control
             return;
         }
 
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Rename), true);
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Delete), true);
-        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.OpenLocation), true);
-        _libraryContextMenu.Position = DisplayServer.MouseGetPosition();
-        _libraryContextMenu.Popup();
+        ShowLibraryContextMenu(GetViewport().GetMousePosition(), allowRename: false, allowDelete: false, allowOpenLocation: false);
     }
 
     private void ToggleLibraryFolderExpansion(string relativePath)
@@ -2890,6 +2898,22 @@ public partial class Main : Control
         SetStatusKey("status.mindmapRegenerated");
     }
 
+    private void OnMindMapLayoutModePressed()
+    {
+        if (_currentDocument is null)
+        {
+            return;
+        }
+
+        _currentMindMapState.LayoutMode = _currentMindMapState.LayoutMode == MindMapLayoutMode.Horizontal
+            ? MindMapLayoutMode.Vertical
+            : MindMapLayoutMode.Horizontal;
+        ResetMindMapLayoutToDefault();
+        RefreshDerivedViews();
+        UpdateMindMapActionButtons();
+        SetStatusKey("status.mindmapLayoutModeChanged");
+    }
+
     private void OnExportOutlineMdPressed()
     {
         if (_currentDocument is null)
@@ -3330,6 +3354,22 @@ public partial class Main : Control
         UpdateMindMapActionButtons();
     }
 
+    private void OnMindMapNodeResized(string nodeId, Vector2 position, Vector2 size)
+    {
+        if (_currentDocument is null)
+        {
+            return;
+        }
+
+        var layout = GetOrCreateNodeLayout(nodeId);
+        layout.X = position.X;
+        layout.Y = position.Y;
+        layout.Width = size.X;
+        layout.Height = size.Y;
+        MarkMindMapDirty();
+        UpdateMindMapActionButtons();
+    }
+
     private void OnMindMapConnectionChanged(
         string childNodeId,
         string parentNodeId,
@@ -3379,6 +3419,15 @@ public partial class Main : Control
                 OnDeletePressed();
                 break;
         }
+    }
+
+    private void ShowLibraryContextMenu(Vector2 popupPosition, bool allowRename, bool allowDelete, bool allowOpenLocation)
+    {
+        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Rename), !allowRename);
+        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.Delete), !allowDelete);
+        _libraryContextMenu.SetItemDisabled(_libraryContextMenu.GetItemIndex((int)LibraryMenuAction.OpenLocation), !allowOpenLocation);
+        _libraryContextMenu.Position = new Vector2I((int)popupPosition.X, (int)popupPosition.Y);
+        _libraryContextMenu.Popup();
     }
 
     private void OpenSelectedLibraryLocation()
@@ -4003,9 +4052,7 @@ public partial class Main : Control
                 continue;
             }
 
-            var size = node.IsRoot
-                ? new Vector2(220f, 84f)
-                : new Vector2(180f, string.IsNullOrWhiteSpace(node.Body) ? 72f : 96f);
+            var size = EstimateMindMapNodeSize(node);
             var rect = new Rect2(position, size);
             bounds = first ? rect : bounds.Merge(rect);
             first = false;
@@ -4036,8 +4083,8 @@ public partial class Main : Control
                 continue;
             }
 
-            var parentRect = new Rect2(parentPosition - bounds.Position, parent.IsRoot ? new Vector2(220f, 84f) : new Vector2(180f, string.IsNullOrWhiteSpace(parent.Body) ? 72f : 96f));
-            var childRect = new Rect2(childPosition - bounds.Position, child.IsRoot ? new Vector2(220f, 84f) : new Vector2(180f, string.IsNullOrWhiteSpace(child.Body) ? 72f : 96f));
+            var parentRect = new Rect2(parentPosition - bounds.Position, EstimateMindMapNodeSize(parent));
+            var childRect = new Rect2(childPosition - bounds.Position, EstimateMindMapNodeSize(child));
             var parentSide = edge.ParentSide;
             var childSide = edge.ChildSide;
             var start = GetSvgAnchor(parentRect, parentSide);
@@ -4056,9 +4103,7 @@ public partial class Main : Control
             }
 
             var rectPosition = position - bounds.Position;
-            var size = node.IsRoot
-                ? new Vector2(220f, 84f)
-                : new Vector2(180f, string.IsNullOrWhiteSpace(node.Body) ? 72f : 96f);
+            var size = EstimateMindMapNodeSize(node);
             builder.AppendLine($@"  <rect x=""{rectPosition.X:F1}"" y=""{rectPosition.Y:F1}"" width=""{size.X:F1}"" height=""{size.Y:F1}"" rx=""12"" ry=""12"" fill=""#ffffff"" stroke=""#d9e3ef"" stroke-width=""1.5"" />");
             builder.AppendLine($@"  <text x=""{rectPosition.X + 16f:F1}"" y=""{rectPosition.Y + 30f:F1}"" font-size=""{(node.IsRoot ? 18 : 14)}"" font-family=""Segoe UI, Arial, sans-serif"" fill=""#223247"">{EscapeSvg(node.Title)}</text>");
             if (!string.IsNullOrWhiteSpace(node.Body))
@@ -4083,6 +4128,32 @@ public partial class Main : Control
         };
     }
 
+    private static Vector2 EstimateMindMapNodeSize(MindMapNodeViewModel node)
+    {
+        var width = node.IsRoot ? 260f : 220f;
+        var titleLines = EstimateMindMapNodeLineCount(node.Title, width - 32f);
+        var bodyLines = string.IsNullOrWhiteSpace(node.Body) ? 0f : EstimateMindMapNodeLineCount(node.Body, width - 32f);
+        var height = 28f + titleLines * 22f + bodyLines * 18f + (bodyLines > 0 ? 10f : 0f);
+        if (node.IsRoot)
+        {
+            height += 8f;
+        }
+
+        return new Vector2(width, Math.Max(72f, height));
+    }
+
+    private static float EstimateMindMapNodeLineCount(string text, float availableWidth)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 1f;
+        }
+
+        var length = text.Trim().Length;
+        var charsPerLine = Math.Max(8f, availableWidth / 14f);
+        return Math.Max(1f, (float)Math.Ceiling(length / charsPerLine));
+    }
+
     private static string EscapeSvg(string value)
     {
         return value
@@ -4103,7 +4174,8 @@ public partial class Main : Control
                 Title = BuildDisplayTitle(),
                 Body = string.Empty,
                 Level = 1,
-                IsRoot = true
+                IsRoot = true,
+                CustomSize = TryGetPersistedMindMapNodeSize(MindMapRootNodeId)
             }
         };
 
@@ -4116,6 +4188,7 @@ public partial class Main : Control
             }
 
             var (title, body) = SplitOutlineText(item.Text);
+            var persistedLayout = _currentMindMapState.Nodes.FirstOrDefault(layout => layout.NodeId == item.Id);
             var edgeLayout = _currentMindMapState.Edges.FirstOrDefault(edge => edge.ChildNodeId == item.Id);
             nodes.Add(new MindMapNodeViewModel
             {
@@ -4125,6 +4198,9 @@ public partial class Main : Control
                 Body = body,
                 Level = item.Depth + 2,
                 IsRoot = false,
+                CustomSize = persistedLayout is not null && persistedLayout.Width > 0f && persistedLayout.Height > 0f
+                    ? new Vector2(persistedLayout.Width, persistedLayout.Height)
+                    : null,
                 IncomingParentSide = edgeLayout?.ParentSide,
                 IncomingChildSide = edgeLayout?.ChildSide
             });
@@ -4143,13 +4219,15 @@ public partial class Main : Control
         }
 
         var nodes = BuildMindMapNodes().ToList();
-        var positions = BuildAutoMindMapLayout(nodes);
+        var positions = BuildAutoMindMapLayout(nodes, _currentMindMapState.LayoutMode);
         _currentMindMapState.Nodes = nodes
             .Select(node => new MindMapNodeLayout
             {
                 NodeId = node.Id,
                 X = positions[node.Id].X,
-                Y = positions[node.Id].Y
+                Y = positions[node.Id].Y,
+                Width = node.CustomSize?.X ?? 0f,
+                Height = node.CustomSize?.Y ?? 0f
             })
             .ToList();
 
@@ -4162,7 +4240,7 @@ public partial class Main : Control
                 continue;
             }
 
-            var (parentSide, childSide) = ComputeDefaultConnectorSides(positions[parent.Id], positions[node.Id]);
+            var (parentSide, childSide) = GetDefaultConnectorSidesForCurrentLayout();
             _currentMindMapState.Edges.Add(new MindMapEdgeLayout
             {
                 ChildNodeId = node.Id,
@@ -4174,7 +4252,14 @@ public partial class Main : Control
         _hasUnsavedMindMapChanges = true;
     }
 
-    private Dictionary<string, Vector2> BuildAutoMindMapLayout(IList<MindMapNodeViewModel> nodes)
+    private Dictionary<string, Vector2> BuildAutoMindMapLayout(IList<MindMapNodeViewModel> nodes, MindMapLayoutMode layoutMode)
+    {
+        return layoutMode == MindMapLayoutMode.Vertical
+            ? BuildVerticalMindMapLayout(nodes)
+            : BuildHorizontalMindMapLayout(nodes);
+    }
+
+    private Dictionary<string, Vector2> BuildHorizontalMindMapLayout(IList<MindMapNodeViewModel> nodes)
     {
         var positions = new Dictionary<string, Vector2>(StringComparer.Ordinal);
         var sizeLookup = new Dictionary<string, float>(StringComparer.Ordinal);
@@ -4195,7 +4280,7 @@ public partial class Main : Control
             }
 
             var node = nodeLookup[nodeId];
-            var ownHeight = GetMindMapNodeHeight(node);
+            var ownHeight = GetMindMapNodeSize(node).Y;
             if (!childrenLookup.TryGetValue(nodeId, out var children) || children.Count == 0)
             {
                 sizeLookup[nodeId] = ownHeight;
@@ -4216,7 +4301,7 @@ public partial class Main : Control
         void PlaceNode(string nodeId, float x, float centerY)
         {
             var node = nodeLookup[nodeId];
-            var ownHeight = GetMindMapNodeHeight(node);
+            var ownHeight = GetMindMapNodeSize(node).Y;
             positions[nodeId] = new Vector2(x, centerY - ownHeight / 2f);
 
             if (!childrenLookup.TryGetValue(nodeId, out var children) || children.Count == 0)
@@ -4250,19 +4335,95 @@ public partial class Main : Control
         return positions;
     }
 
-    private static float GetMindMapNodeHeight(MindMapNodeViewModel node)
+    private Dictionary<string, Vector2> BuildVerticalMindMapLayout(IList<MindMapNodeViewModel> nodes)
     {
-        if (node.IsRoot)
+        var positions = new Dictionary<string, Vector2>(StringComparer.Ordinal);
+        var sizeLookup = new Dictionary<string, float>(StringComparer.Ordinal);
+        var nodeLookup = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        var childrenLookup = nodes
+            .GroupBy(node => node.ParentId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+        const float rootCenterX = 640f;
+        const float rootY = 120f;
+        const float siblingGap = 34f;
+
+        float MeasureSubtree(string nodeId)
         {
-            return 84f;
+            if (sizeLookup.TryGetValue(nodeId, out var cached))
+            {
+                return cached;
+            }
+
+            var node = nodeLookup[nodeId];
+            var ownWidth = GetMindMapNodeSize(node).X;
+            if (!childrenLookup.TryGetValue(nodeId, out var children) || children.Count == 0)
+            {
+                sizeLookup[nodeId] = ownWidth;
+                return ownWidth;
+            }
+
+            var totalChildrenWidth = 0f;
+            foreach (var child in children)
+            {
+                totalChildrenWidth += MeasureSubtree(child.Id);
+            }
+
+            totalChildrenWidth += siblingGap * Math.Max(0, children.Count - 1);
+            sizeLookup[nodeId] = Math.Max(ownWidth, totalChildrenWidth);
+            return sizeLookup[nodeId];
         }
 
-        return string.IsNullOrWhiteSpace(node.Body) ? 72f : 96f;
+        void PlaceNode(string nodeId, float centerX, float y)
+        {
+            var node = nodeLookup[nodeId];
+            var ownSize = GetMindMapNodeSize(node);
+            positions[nodeId] = new Vector2(centerX - ownSize.X / 2f, y);
+
+            if (!childrenLookup.TryGetValue(nodeId, out var children) || children.Count == 0)
+            {
+                return;
+            }
+
+            var totalChildrenWidth = 0f;
+            foreach (var child in children)
+            {
+                totalChildrenWidth += MeasureSubtree(child.Id);
+            }
+
+            totalChildrenWidth += siblingGap * Math.Max(0, children.Count - 1);
+            var cursor = centerX - totalChildrenWidth / 2f;
+            foreach (var child in children)
+            {
+                var childWidth = MeasureSubtree(child.Id);
+                var childCenterX = cursor + childWidth / 2f;
+                PlaceNode(child.Id, childCenterX, y + GetMindMapRowSpacing(child.Level));
+                cursor += childWidth + siblingGap;
+            }
+        }
+
+        foreach (var node in nodes)
+        {
+            MeasureSubtree(node.Id);
+        }
+
+        PlaceNode(MindMapRootNodeId, rootCenterX, rootY);
+        return positions;
+    }
+
+    private static Vector2 GetMindMapNodeSize(MindMapNodeViewModel node)
+    {
+        return EstimateMindMapNodeSize(node);
     }
 
     private static float GetMindMapColumnSpacing(int level)
     {
         return level <= 2 ? 330f : 270f;
+    }
+
+    private static float GetMindMapRowSpacing(int level)
+    {
+        return level <= 2 ? 190f : 170f;
     }
 
     private void EnsureMindMapStateMatches(IList<MindMapNodeViewModel> nodes)
@@ -4276,7 +4437,7 @@ public partial class Main : Control
             _currentMindMapState.Zoom = 1f;
         }
 
-        var autoLayout = BuildAutoMindMapLayout(nodes);
+        var autoLayout = BuildAutoMindMapLayout(nodes, _currentMindMapState.LayoutMode);
         foreach (var node in nodes)
         {
             var layout = _currentMindMapState.Nodes.FirstOrDefault(entry => entry.NodeId == node.Id);
@@ -4287,13 +4448,18 @@ public partial class Main : Control
                 {
                     NodeId = node.Id,
                     X = autoPosition.X,
-                    Y = autoPosition.Y
+                    Y = autoPosition.Y,
+                    Width = node.CustomSize?.X ?? 0f,
+                    Height = node.CustomSize?.Y ?? 0f
                 };
                 _currentMindMapState.Nodes.Add(layout);
                 _hasUnsavedMindMapChanges = true;
             }
 
             node.Position = new Vector2(layout.X, layout.Y);
+            node.CustomSize = layout.Width > 0f && layout.Height > 0f
+                ? new Vector2(layout.Width, layout.Height)
+                : null;
         }
 
         var nodeLookup = nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
@@ -4309,7 +4475,7 @@ public partial class Main : Control
                 continue;
             }
 
-            var (parentSide, childSide) = ComputeDefaultConnectorSides(parent.Position, node.Position);
+            var (parentSide, childSide) = GetDefaultConnectorSidesForCurrentLayout();
             _currentMindMapState.Edges.Add(new MindMapEdgeLayout
             {
                 ChildNodeId = node.Id,
@@ -4334,10 +4500,23 @@ public partial class Main : Control
         {
             NodeId = nodeId,
             X = 120f,
-            Y = 120f
+            Y = 120f,
+            Width = 0f,
+            Height = 0f
         };
         _currentMindMapState.Nodes.Add(existing);
         return existing;
+    }
+
+    private Vector2? TryGetPersistedMindMapNodeSize(string nodeId)
+    {
+        var existing = _currentMindMapState.Nodes.FirstOrDefault(layout => layout.NodeId == nodeId);
+        if (existing is null || existing.Width <= 0f || existing.Height <= 0f)
+        {
+            return null;
+        }
+
+        return new Vector2(existing.Width, existing.Height);
     }
 
     private void SaveEdgeLayout(
@@ -4357,6 +4536,20 @@ public partial class Main : Control
 
         edge.ParentSide = parentSide;
         edge.ChildSide = childSide;
+    }
+
+    private (MindMapConnectorSide ParentSide, MindMapConnectorSide ChildSide) GetDefaultConnectorSidesForCurrentLayout()
+    {
+        return _currentMindMapState.LayoutMode == MindMapLayoutMode.Vertical
+            ? (MindMapConnectorSide.Bottom, MindMapConnectorSide.Top)
+            : (MindMapConnectorSide.Right, MindMapConnectorSide.Left);
+    }
+
+    private string GetMindMapLayoutModeLabel()
+    {
+        return _currentMindMapState.LayoutMode == MindMapLayoutMode.Vertical
+            ? T("mindmap.layout.vertical")
+            : T("mindmap.layout.horizontal");
     }
 
     private static (MindMapConnectorSide ParentSide, MindMapConnectorSide ChildSide) ComputeDefaultConnectorSides(
@@ -4508,5 +4701,3 @@ public partial class Main : Control
             .TrimEnd();
     }
 }
-
-

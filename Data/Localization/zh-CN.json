@@ -1,4 +1,4 @@
-{
+﻿{
   "locale.label": "语言",
   "locale.zh-CN": "中文",
   "locale.en": "English",
@@ -40,6 +40,8 @@
   "mindmap.rename": "重命名",
   "mindmap.delete": "删除",
   "mindmap.regenerate": "重新排布",
+  "mindmap.layout.horizontal": "水平布局",
+  "mindmap.layout.vertical": "垂直布局",
   "mindmap.export": "导出脑图",
   "csv.hint": "当前大纲会映射成层级配置表。",
   "csv.export": "导出 CSV",
@@ -54,6 +56,7 @@
   "status.renamedDocument": "已重命名文档：{path}",
   "status.trashFocused": "已定位到回收站。",
   "status.mindmapRegenerated": "已重新排布脑图。",
+  "status.mindmapLayoutModeChanged": "脑图布局模式已更新。",
   "status.markdownExported": "Markdown 已导出：{path}",
   "status.mindmapPngExported": "脑图 PNG 已导出：{path}",
   "status.mindmapJpgExported": "脑图 JPG 已导出：{path}",
